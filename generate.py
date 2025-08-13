@@ -3,9 +3,12 @@ import yaml
 import h5py
 import numpy as np
 from PIL import Image
+from tqdm import tqdm
 from utils.bezier_util import generate_bezier_trajectory
 from utils.cone_util import generate_cone_trajectory
-from utils.cone_util import generate_rpy_trajectory
+from utils.rpy_util import generate_rpy_trajectory
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 def curve_length(curve):
     return np.sum(np.linalg.norm(np.diff(curve, axis=0), axis=1))
@@ -60,7 +63,32 @@ def generate_episode(output_dir, episode_id, curve, rpy_state, imgs):
         g_effector = h5_file.create_group('effector')
         g_effector.create_dataset('position', data=curve)
 
-    print(f"Episode {episode_id} generated: {episode_path}")
+    # Visualization of combined_data
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+
+    # Plot the curve
+    ax.plot(curve[:, 0], curve[:, 1], curve[:, 2], label='Curve', color='blue')
+
+    # Add unit vectors (rpy) at each point
+    for i in range(len(curve)):
+        ax.quiver(
+            curve[i, 0], curve[i, 1], curve[i, 2],
+            rpy_state[i, 0], rpy_state[i, 1], rpy_state[i, 2],
+            length=0.1, color='red'
+        )
+
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+    ax.legend()
+
+    # Save the plot
+    plot_path = os.path.join(episode_path, 'curve_visualization.png')
+    plt.savefig(plot_path)
+    plt.close()
+
+    # print(f"Episode {episode_id} generated: {episode_path}")
 
 def main():
     # Load configuration
@@ -71,6 +99,7 @@ def main():
     curve_type = config.get('curve_type', 'bezier')
     root_path = config.get('root_path')
     trunk_size = config.get('trunk_size', 32)
+    output_path = config.get('output_path', 'output/')
 
     # Ensure directories exist
     if not os.path.exists(root_path):
@@ -82,30 +111,41 @@ def main():
 
     with h5py.File(h5_path, 'r') as h5_data:
         # Call the appropriate curve generation function
-        endpoint = h5_data['endpoints'][6:12]
+        endpoint = h5_data['endpoint'][6:12]
         eef_positions = np.array(h5_data['state/eef/position'])
     
-    for eef_id, eef_position in enumerate(eef_positions):
+    episode_cnt = 0
+    # Add tqdm progress bar to the loop
+    for eef_id, eef_position in enumerate(tqdm(eef_positions, desc="Processing eef_positions")):
         xyz_start = eef_position[6:9]
         xyz_end = endpoint[0:3]
         # Generate the curve
         curve = generate_curve(curve_type, xyz_start, xyz_end, trunk_size)
         curve_length = len(curve)
 
+        if curve_length < 10:
+            print(f"Warning: No valid curve generated for eef_id {eef_id}. Skipping.")
+            continue
+
         rpy_start = eef_position[9:12]
         rpy_end = endpoint[3:6]
         # Generate the RPY trajectory
         rpy_state = generate_rpy_trajectory(rpy_start, rpy_end, curve_length)
 
-        img_path = os.path.join(root_path, 'camera', eef_id)
+        img_path = os.path.join(root_path, 'camera', str(eef_id))
+        if not os.path.exists(img_path):
+            print(f"Warning: Image path {img_path} does not exist. Break at eef_id {eef_id}.")
+            break
+
+            # Load images from the specified path
         imgs = [img for img in os.listdir(img_path) if img.endswith('.jpg')]
+        # Prepend the full path to the image filenames
+        imgs = [os.path.join(img_path, img) for img in imgs]
+        imgs = [Image.open(img) for img in imgs]
 
         # Generate the episode
-        generate_episode(root_path, 0, curve, rpy_state, imgs)
-
-
-
-
+        generate_episode(output_path, episode_cnt, curve, rpy_state, imgs)
+        episode_cnt += 1
 
 if __name__ == "__main__":
     main()
