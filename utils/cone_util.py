@@ -49,28 +49,28 @@ def compute_action_smooth(O, A, B, theta, alpha=1.0, beta=1.0):
     return (alpha_eff * dir_along + beta * dir_radial) * r
 
 # ------------ 轨迹生成（步长裁剪 + 强制到位） ------------
-def generate_cone_trajectory(O, A, B0, theta,
+def generate_cone_trajectory(start, end, num, theta=30,
                                  dt=0.05,
-                                 max_steps=1000,
                                  eps_stop=1e-4):
-    traj, acts = [B0.copy()], []
-    for step in range(max_steps):
+    traj, acts = [end.copy()], []
+    for step in range(num):
         cur = traj[-1]
-        r = np.linalg.norm(cur - O)
+        r = np.linalg.norm(cur - start)
         if r < eps_stop:                  # 到达
-            traj[-1] = O                  # 强制精确到 O
+            traj[-1] = start                  # 强制精确到 O
             return np.array(traj), np.array(acts)
 
         # 方向、速度、裁剪
-        v = compute_action_smooth(O, A, cur, theta)
+        A = [start[0], start[1] + 1, start[2]]
+        v = compute_action_smooth(start, A, cur, theta)
         v_len = np.linalg.norm(v)
         if v_len == 0:                    # 已在 O
             return np.array(traj), np.array(acts)
 
         step_len = min(v_len * dt, 0.8 * r)   # 不超 0.8 倍剩余距离
         step_vec = normalize(v) * step_len
-        new_B = cur + step_vec
-        traj.append(new_B)
+        end_step = cur + step_vec
+        traj.append(end_step)
         acts.append(step_vec / dt)
 
     # 若未收敛，也强制终点为 O
