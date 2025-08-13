@@ -5,6 +5,7 @@ import numpy as np
 from PIL import Image
 from utils.bezier_util import generate_bezier_trajectory
 from utils.cone_util import generate_cone_trajectory
+from utils.cone_util import generate_rpy_trajectory
 
 def curve_length(curve):
     return np.sum(np.linalg.norm(np.diff(curve, axis=0), axis=1))
@@ -27,10 +28,6 @@ def generate_curve(curve_type, start, end, trunk_size, belta = 0.003):
     return curve
 
 def generate_episode(output_dir, episode_id, curve, rpy_state, imgs):
-    '''
-    TODO: Get rpy state
-    '''
-    
     episode_path = os.path.join(output_dir, f"episode{episode_id}")
     os.makedirs(episode_path, exist_ok=True)
 
@@ -46,7 +43,6 @@ def generate_episode(output_dir, episode_id, curve, rpy_state, imgs):
     imgs[2].save(head_image_path)
 
     h5_path = os.path.join(episode_path, 'aligned_joints.h5')
-    curve_len = len(curve)
     with h5py.File(h5_path, 'w') as h5_file:
         h5_file.create_dataset('timestamps', data=np.arange(len(curve)))
         g_action = h5_file.create_group('action')
@@ -88,7 +84,24 @@ def main():
         # Call the appropriate curve generation function
         endpoint = h5_data['endpoints'][6:12]
         eef_positions = np.array(h5_data['state/eef/position'])
-        timestamps = np.array(h5_data['timestamp'])
+    
+    for eef_id, eef_position in enumerate(eef_positions):
+        xyz_start = eef_position[6:9]
+        xyz_end = endpoint[0:3]
+        # Generate the curve
+        curve = generate_curve(curve_type, xyz_start, xyz_end, trunk_size)
+        curve_length = len(curve)
+
+        rpy_start = eef_position[9:12]
+        rpy_end = endpoint[3:6]
+        # Generate the RPY trajectory
+        rpy_state = generate_rpy_trajectory(rpy_start, rpy_end, curve_length)
+
+        img_path = os.path.join(root_path, 'camera', eef_id)
+        imgs = [img for img in os.listdir(img_path) if img.endswith('.jpg')]
+
+        # Generate the episode
+        generate_episode(root_path, 0, curve, rpy_state, imgs)
 
 
 
