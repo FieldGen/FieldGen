@@ -32,17 +32,3 @@ def generate_bezier_trajectory(start, end, num=200, safe_plane_x=0):
     curve = bezier_curve(control_points, num)
     # 采样m个最近点（只用输入采样点）
     return curve
-
-# 用法示例
-if __name__ == "__main__":
-    start = np.array([-0.2, 0.1, 0.3])
-    end = np.array([0.3, 0.2, 0.5])
-    sample_points = [
-        {'img': None, 'state': None, 'xyz': np.array([x, y, z])}
-        for x, y, z in np.random.rand(100, 3)
-    ]
-    m = 10
-    traj, grasp, dist = generate_bezier_trajectory(start, end, sample_points, m)
-    print("轨迹点数量:", len(traj))
-    print("抓取点坐标:", grasp)
-    print("安全平面距离:", dist)

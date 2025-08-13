@@ -1,0 +1,6 @@
+# Configuration file for curve generation
+# Specify the type of curve generation and input file paths
+
+curve_type: bezier  # Options: bezier, cone
+root_path: ./data/h5_files
+trunk_size: 32
