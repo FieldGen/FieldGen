@@ -5,6 +5,7 @@ cone_strict_end.py
 保证所有轨迹最终**精确**收敛到 O
 """
 
+from ast import main
 import numpy as np
 import plotly.graph_objects as go
 
@@ -92,60 +93,61 @@ def create_cone_mesh(O, A, theta, height=2.5, n_circle=64, n_gen=50):
     Z = O[2] + R * np.cos(P) * e1[2] + R * np.sin(P) * e2[2] + H * k[2]
     return X, Y, Z
 
-# ------------ 场景参数 ------------
-O = np.array([0., 0., 0.])
-A = np.array([0., 0., 2.])
-theta = 30.
+if __name__ == '__main':
+    # ------------ 场景参数 ------------
+    O = np.array([0., 0., 0.])
+    A = np.array([0., 0., 2.])
+    theta = 30.
 
-B_points = [
-    np.array([2., 1., 1.5]),
-    np.array([3., 2., 2.]),
-    np.array([-1.5, -1., 1.]),
-    np.array([2.5, -2., 0.5]),
-]
-colors = ['crimson', 'lime', 'orange', 'magenta']
+    B_points = [
+        np.array([2., 1., 1.5]),
+        np.array([3., 2., 2.]),
+        np.array([-1.5, -1., 1.]),
+        np.array([2.5, -2., 0.5]),
+    ]
+    colors = ['crimson', 'lime', 'orange', 'magenta']
 
-# ------------ 绘图 ------------
-data = []
+    # ------------ 绘图 ------------
+    data = []
 
-for B0, color in zip(B_points, colors):
-    traj, acts, ok = generate_trajectory_improved(O, A, B0, theta)
-    # 轨迹线
-    data.append(go.Scatter3d(x=traj[:, 0], y=traj[:, 1], z=traj[:, 2],
-                             mode='lines', line=dict(color=color, width=4),
-                             name=f'traj-{color}'))
-    # 起点
-    data.append(go.Scatter3d(x=[B0[0]], y=[B0[1]], z=[B0[2]],
-                             mode='markers', marker=dict(size=6, color=color),
-                             name=f'start-{color}'))
-    # 稀疏箭头
-    mask = np.arange(0, len(acts), max(1, len(acts)//20))
-    for i in mask:
-        p, v = traj[i], acts[i] * 0.1
-        data.append(go.Cone(x=[p[0]], y=[p[1]], z=[p[2]],
-                            u=[v[0]], v=[v[1]], w=[v[2]],
-                            colorscale=[[0, color], [1, color]],
-                            sizeref=0.3, showscale=False, anchor='tail'))
+    for B0, color in zip(B_points, colors):
+        traj, acts = generate_cone_trajectory(O, A, B0, theta)
+        # 轨迹线
+        data.append(go.Scatter3d(x=traj[:, 0], y=traj[:, 1], z=traj[:, 2],
+                                mode='lines', line=dict(color=color, width=4),
+                                name=f'traj-{color}'))
+        # 起点
+        data.append(go.Scatter3d(x=[B0[0]], y=[B0[1]], z=[B0[2]],
+                                mode='markers', marker=dict(size=6, color=color),
+                                name=f'start-{color}'))
+        # 稀疏箭头
+        mask = np.arange(0, len(acts), max(1, len(acts)//20))
+        for i in mask:
+            p, v = traj[i], acts[i] * 0.1
+            data.append(go.Cone(x=[p[0]], y=[p[1]], z=[p[2]],
+                                u=[v[0]], v=[v[1]], w=[v[2]],
+                                colorscale=[[0, color], [1, color]],
+                                sizeref=0.3, showscale=False, anchor='tail'))
 
-# 圆锥
-X, Y, Z = create_cone_mesh(O, A, theta)
-data.append(go.Surface(x=X, y=Y, z=Z, opacity=0.25, colorscale='Blues',
-                       showscale=False, name='cone'))
+    # 圆锥
+    X, Y, Z = create_cone_mesh(O, A, theta)
+    data.append(go.Surface(x=X, y=Y, z=Z, opacity=0.25, colorscale='Blues',
+                        showscale=False, name='cone'))
 
-# ------------ 布局 ------------
-fig = go.Figure(data=data)
-xyz = np.vstack([O, A] + B_points)
-margin = 0.5
-mins, maxs = xyz.min(axis=0) - margin, xyz.max(axis=0) + margin
-fig.update_layout(
-    scene=dict(xaxis=dict(range=[mins[0], maxs[0]], title='X'),
-               yaxis=dict(range=[mins[1], maxs[1]], title='Y'),
-               zaxis=dict(range=[mins[2], maxs[2]], title='Z'),
-               aspectmode='cube'),
-    title='Cone Grasp – Strict End at O',
-    margin=dict(l=0, r=0, t=40, b=0)
-)
+    # ------------ 布局 ------------
+    fig = go.Figure(data=data)
+    xyz = np.vstack([O, A] + B_points)
+    margin = 0.5
+    mins, maxs = xyz.min(axis=0) - margin, xyz.max(axis=0) + margin
+    fig.update_layout(
+        scene=dict(xaxis=dict(range=[mins[0], maxs[0]], title='X'),
+                yaxis=dict(range=[mins[1], maxs[1]], title='Y'),
+                zaxis=dict(range=[mins[2], maxs[2]], title='Z'),
+                aspectmode='cube'),
+        title='Cone Grasp – Strict End at O',
+        margin=dict(l=0, r=0, t=40, b=0)
+    )
 
-fig.write_html("cone_strict_end.html")
-print("已生成交互式网页：cone_strict_end.html")
-fig.show()
+    fig.write_html("cone_strict_end.html")
+    print("已生成交互式网页：cone_strict_end.html")
+    fig.show()
