@@ -9,6 +9,7 @@ from utils.cone_util import generate_cone_trajectory
 from utils.rpy_util import generate_rpy_trajectory
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+from scipy.spatial.transform import Rotation as R
 
 def curve_length(curve):
     return np.sum(np.linalg.norm(np.diff(curve, axis=0), axis=1))
@@ -70,12 +71,18 @@ def generate_episode(output_dir, episode_id, curve, rpy_state, imgs):
     # Plot the curve
     ax.plot(curve[:, 0], curve[:, 1], curve[:, 2], label='Curve', color='blue')
 
-    # Add unit vectors (rpy) at each point
+    # Add start and end points
+    ax.scatter(curve[0, 0], curve[0, 1], curve[0, 2], color='green', label='Start', s=50)
+    ax.scatter(curve[-1, 0], curve[-1, 1], curve[-1, 2], color='orange', label='End', s=50)
+
+    # Visualize rpy as rotation directions
     for i in range(len(curve)):
+        rotation = R.from_euler('xyz', rpy_state[i])
+        direction = rotation.apply([1, 0, 0])  # Use x-axis as reference direction
         ax.quiver(
             curve[i, 0], curve[i, 1], curve[i, 2],
-            rpy_state[i, 0], rpy_state[i, 1], rpy_state[i, 2],
-            length=0.1, color='red'
+            direction[0], direction[1], direction[2],
+            length=0.005, color='red', arrow_length_ratio=0.3
         )
 
     ax.set_xlabel('X')
