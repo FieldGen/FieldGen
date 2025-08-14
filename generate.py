@@ -31,7 +31,7 @@ def generate_curve(curve_type, start, end, trunk_size, belta = 0.003):
     
     return curve
 
-def generate_episode(output_dir, episode_id, curve, rpy_state, imgs):
+def generate_episode(output_dir, episode_id, combined_data, gripper, imgs):
     episode_path = os.path.join(output_dir, f"episode{episode_id}")
     os.makedirs(episode_path, exist_ok=True)
 
@@ -48,23 +48,22 @@ def generate_episode(output_dir, episode_id, curve, rpy_state, imgs):
 
     h5_path = os.path.join(episode_path, 'aligned_joints.h5')
     with h5py.File(h5_path, 'w') as h5_file:
-        h5_file.create_dataset('timestamps', data=np.arange(len(curve)))
+        h5_file.create_dataset('timestamps', data=np.arange(len(combined_data)))
         g_action = h5_file.create_group('action')
         g_state = h5_file.create_group('state')
         g_action_eef = g_action.create_group('eef')
         g_state_eef = g_state.create_group('eef')
-        
-        # Combine curve and rpy_state into a single array of shape (T, 6)
-        combined_data = np.hstack((curve, rpy_state))
+        g_action_gripper = g_action.create_group('effector')
+        g_state_gripper = g_state.create_group('effector')
 
         # Save the combined data into the position dataset
         g_action_eef.create_dataset('position', data=combined_data)
         g_state_eef.create_dataset('position', data=combined_data)
 
-        g_effector = h5_file.create_group('effector')
-        g_effector.create_dataset('position', data=curve)
+        g_action_gripper.create_dataset('position', data=gripper/90)
+        g_state_gripper.create_dataset('position', data=gripper)
 
-    visualize_curve_with_rpy(curve, rpy_state, episode_path)
+    # visualize_curve_with_rpy(curve, rpy_state, episode_path)
 
     # print(f"Episode {episode_id} generated: {episode_path}")
 
@@ -128,6 +127,8 @@ def main():
         eef_positions = np.array(h5_data['state/eef/position'])
     
     episode_cnt = 0
+    len_min = 10000
+    episode_id = 0
     # Add tqdm progress bar to the loop
     for eef_id, eef_position in enumerate(tqdm(eef_positions, desc="Processing eef_positions")):
         xyz_start = eef_position[6:9]
@@ -136,14 +137,28 @@ def main():
         curve = generate_curve(curve_type, xyz_start, xyz_end, trunk_size)
         curve_length = len(curve)
 
-        if curve_length < 10:
-            print(f"Warning: No valid curve generated for eef_id {eef_id}. Skipping.")
-            continue
+        if curve_length < len_min:
+            len_min = curve_length
+            episode_id = eef_id
+
+        gripper = np.tile([0.0, 0.0], (curve_length, 1))
+
+        if curve_length < trunk_size:
+            gripper[-1] = [0.0, 90.0]
+            while len(curve) < trunk_size:
+                curve = np.vstack([curve, curve[-1]])
+                gripper = np.vstack([gripper, gripper[-1]])
+            curve_length = len(curve)
 
         rpy_start = eef_position[9:12]
         rpy_end = endpoint[3:6]
         # Generate the RPY trajectory
         rpy_state = generate_rpy_trajectory(rpy_start, rpy_end, curve_length)
+
+        left_curve = np.tile(eef_position[0:3], (curve_length, 1))
+        left_rpy = np.tile(eef_position[3:6], (curve_length, 1))
+
+        combined_data = np.hstack((left_curve, left_rpy, curve, rpy_state))
 
         img_path = os.path.join(root_path, 'camera', str(eef_id))
         if not os.path.exists(img_path):
@@ -157,8 +172,10 @@ def main():
         imgs = [Image.open(img) for img in imgs]
 
         # Generate the episode
-        generate_episode(output_path, episode_cnt, curve, rpy_state, imgs)
+        generate_episode(output_path, episode_cnt, combined_data, gripper, imgs)
         episode_cnt += 1
+    
+    print("len_min:", len_min, ", episode_id:", episode_id)
 
 if __name__ == "__main__":
     main()
