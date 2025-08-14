@@ -38,13 +38,11 @@ def generate_episode(output_dir, episode_id, combined_data, gripper, imgs):
     # Ensure camera/0 directory exists
     camera_path = os.path.join(episode_path, 'camera', '0')
     os.makedirs(camera_path, exist_ok=True)
-    # Save the img
-    hand_left_image_path = os.path.join(camera_path, 'hand_left.jpg')
-    hand_right_image_path = os.path.join(camera_path, 'hand_right.jpg')
-    head_image_path = os.path.join(camera_path, 'head.jpg')
-    imgs[0].save(hand_left_image_path)
-    imgs[1].save(hand_right_image_path)
-    imgs[2].save(head_image_path)
+    # Save the images using their keys
+    for img_key, img in imgs.items():
+        img_filename = f"{img_key}.jpg"
+        img_path = os.path.join(camera_path, img_filename)
+        img.save(img_path)
 
     h5_path = os.path.join(episode_path, 'aligned_joints.h5')
     with h5py.File(h5_path, 'w') as h5_file:
@@ -165,11 +163,14 @@ def main():
             print(f"Warning: Image path {img_path} does not exist. Break at eef_id {eef_id}.")
             break
 
-            # Load images from the specified path
-        imgs = [img for img in os.listdir(img_path) if img.endswith('.jpg')]
-        # Prepend the full path to the image filenames
-        imgs = [os.path.join(img_path, img) for img in imgs]
-        imgs = [Image.open(img) for img in imgs]
+            # Load images from the specified path and create a dictionary with image names as keys
+        img_files = [img for img in os.listdir(img_path) if img.endswith('.jpg')]
+        imgs = {}
+        for img_file in img_files:
+            # Extract image name without extension as key
+            img_name = os.path.splitext(img_file)[0]
+            img_full_path = os.path.join(img_path, img_file)
+            imgs[img_name] = Image.open(img_full_path)
 
         # Generate the episode
         generate_episode(output_path, episode_cnt, combined_data, gripper, imgs)
