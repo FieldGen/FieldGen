@@ -1,151 +1,198 @@
 #!/usr/bin/env python3
 """
-cone_strict_end.py
-交互式 3D：圆锥 + 轨迹 + action 箭头
-保证所有轨迹最终**精确**收敛到 O
+Cone Trajectory – inner cycloid + OA-directed entry
 """
 
-from ast import main
 import numpy as np
 import plotly.graph_objects as go
 
-# ---------------- 工具 ----------------
+# ---------- 小工具 ----------
 def normalize(v):
     v = np.asarray(v, dtype=float)
     n = np.linalg.norm(v)
-    return np.zeros_like(v) if n == 0 else v / n
+    return v / n if n else v
 
-def angle_between(u, v):
-    u, v = normalize(u), normalize(v)
-    return np.arccos(np.clip(np.dot(u, v), -1.0, 1.0))
-
-# ---------------- 运动模型 ----------------
-def compute_action_smooth(O, A, B, theta, alpha=1.0, beta=1.0):
-    OA, OB = A - O, B - O
+# ---------- 圆锥内判断 ----------
+def inside_cone(B, O, OA, theta):
+    OB = B - O
     r = np.linalg.norm(OB)
     if r == 0:
-        return np.zeros_like(O, dtype=float)
+        return True
+    phi = np.arccos(np.clip(np.dot(OB, OA) / r, -1, 1))
+    return phi <= np.radians(theta)
 
-    k_hat, phi = normalize(OA), angle_between(OB, OA)
-    theta_r = np.radians(theta)
+# ---------- 直线沿 y 轴负方向到圆锥面 ----------
+def straight_to_cone(B, O, theta, n_rough=400):
+    """
+    沿 y 轴负方向（OA=[0,-1,0]）直线与圆锥面相交
+    圆锥方程：sqrt(x²+z²) = -m·y  (y<0)
+    """
+    m = np.tan(np.radians(theta))
+    Bp = B - O                                   # 相对顶点
+    y0 = Bp[1]                                   # 当前 y
+    r_horiz = np.linalg.norm([Bp[0], Bp[2]])     # 径向距离
+    # t 满足  r_horiz = -m (y0 - t)  且 y0 - t < 0
+    t = y0 + r_horiz / m
+    hit = B + np.array([0, -t, 0])         # 沿 y 轴负方向
+    
+    # 在B和hit之间生成n_rough个非均匀分布的点
+    # 越靠近终点O（hit点），步幅越小
+    u = np.linspace(0, 1, n_rough)
+    
+    # 使用指数函数创建非均匀分布，靠近终点(u=1)时步幅更小
+    power = 2.0  # power > 1 使得靠近终点时采样更密集
+    u_nonuniform = u ** power
+    
+    line_points = []
+    for u_val in u_nonuniform:
+        point = B + u_val * (hit - B)
+        line_points.append(point)
+    
+    return np.array(line_points)
 
-    # 圆锥外
-    if phi > theta_r + 1e-9:
-        proj_len = np.dot(OB, k_hat)
-        radial_vec = OB - proj_len * k_hat
-        radial_dir = normalize(radial_vec) if np.linalg.norm(radial_vec) else normalize(np.cross(k_hat, [1, 0, 0]))
-        d_angle = phi - theta_r
-        return d_angle * r * (-radial_dir)
+# ---------- 圆锥内摆线 ----------
+def cone_inner_cycloid(B, O, A, n_rough=200):
+    """
+    Generate a cycloid curve from B to O in the AOB plane.
+    B: starting point
+    O: end point (cone vertex)
+    A: a point on the cone axis, defining the axis direction OA
+    n_rough: number of points to sample on the curve
+    """
+    B = np.asarray(B, dtype=float)
+    O = np.asarray(O, dtype=float)
+    A = np.asarray(A, dtype=float)
 
-    # 圆锥内
-    dist_axis = np.linalg.norm(np.cross(OB, k_hat))
-    axis_thresh = 0.3
-    t = max(0, (axis_thresh - dist_axis) / axis_thresh)
-    alpha_eff = alpha * (1 / (1 + np.exp(10 * (t - 0.5))))
-    alpha_eff = max(alpha_eff, 0.1)
+    OA = A - O
+    OB = B - O
 
-    dir_along = normalize(np.cross(k_hat, np.cross(k_hat, OB)))
-    dir_radial = -k_hat
-    return (alpha_eff * dir_along + beta * dir_radial) * r
+    # 1. Define the coordinate system of the AOB plane
+    # y'-axis is along the cone axis OA
+    y_prime_axis = normalize(OA)
+    
+    # x'-axis is in the AOB plane and perpendicular to the y'-axis
+    # It's the component of OB perpendicular to OA
+    proj_OB_on_OA = np.dot(OB, y_prime_axis) * y_prime_axis
+    x_prime_vec = OB - proj_OB_on_OA
+    
+    # Handle the case where B is on the axis
+    if np.linalg.norm(x_prime_vec) < 1e-6:
+        # B is on the axis, the curve is a straight line from B to O
+        return np.linspace(B, O, n_rough)
+        
+    x_prime_axis = normalize(x_prime_vec)
 
-# ------------ 轨迹生成（步长裁剪 + 强制到位） ------------
-def generate_cone_trajectory(start, end, num, theta=30, dt=0.05, eps_stop=1e-4):
-    traj, acts = [end.copy()], []
-    for step in range(num):
-        cur = traj[-1]
-        r = np.linalg.norm(cur - start)
-        if r < eps_stop:                  # 到达
-            traj[-1] = start                  # 强制精确到 O
-            return np.array(traj), np.array(acts)
+    # 2. Find the coordinates of B in the new (x', y') coordinate system
+    # The origin of this system is O
+    x_b_prime = np.linalg.norm(x_prime_vec)
+    y_b_prime = np.dot(OB, y_prime_axis)
 
-        # 方向、速度、裁剪
-        A = [start[0], start[1] - 1, start[2]]
-        v = compute_action_smooth(start, A, cur, theta)
-        v_len = np.linalg.norm(v)
-        if v_len == 0:                    # 已在 O
-            return np.array(traj), np.array(acts)
+    # 3. Generate a 2D cycloid from (0, 0) to (x_b_prime, y_b_prime)
+    # We use one half-arch of a standard cycloid, scaled.
+    # Standard half-arch: t from 0 to pi -> x=(t-sin(t)), y=(1-cos(t))
+    # This goes from (0,0) to (pi, 2)
+    
+    # 非均匀采样：越靠近终点O，步幅越小
+    # 使用指数函数来创建非均匀的参数分布
+    # 参数u从0到1，映射到t从0到pi
+    u = np.linspace(0, 1, n_rough)
+    
+    # 使用指数函数创建非均匀分布，靠近终点(u=1)时步幅更小
+    # 可以通过调整power参数来控制非均匀程度
+    power = 2.0  # power > 1 使得靠近终点时采样更密集
+    u_nonuniform = u ** power
+    
+    # 将非均匀参数映射到摆线参数t
+    t = u_nonuniform * np.pi
+    
+    # Scale factors to map the half-arch to our target point (x_b_prime, y_b_prime)
+    x_prime_curve = (x_b_prime / np.pi) * (t - np.sin(t))
+    y_prime_curve = (y_b_prime / 2.0) * (1 - np.cos(t))
 
-        step_len = min(v_len * dt, 0.8 * r)   # 不超 0.8 倍剩余距离
-        step_vec = normalize(v) * step_len
-        end_step = cur + step_vec
-        traj.append(end_step)
-        acts.append(step_vec / dt)
+    # 4. Transform the 2D curve back to the original 3D coordinate system
+    # The curve is a linear combination of the basis vectors x_prime_axis and y_prime_axis,
+    # translated by the origin O.
+    curve = O + x_prime_curve[:, np.newaxis] * x_prime_axis + y_prime_curve[:, np.newaxis] * y_prime_axis
+    
+    # The curve is generated from O to B, so we reverse it to go from B to O.
+    return curve[::-1]
 
-    # 若未收敛，也强制终点为 O
-    traj.append(start)
-    return np.array(traj)
+# ---------- 主轨迹（带标记） ----------
+def generate_cone_trajectory(start, end, num, theta=60):
+    O  = np.asarray(end, dtype=float)
+    OA = np.array([0, -1, 0])
+    OA = normalize(OA)
 
-# ------------ 圆锥网格 ------------
-def create_cone_mesh(O, A, theta, height=2.5, n_circle=64, n_gen=50):
-    k = normalize(A - O)
-    h = np.linspace(0, height, n_gen)
-    angles = np.linspace(0, 2 * np.pi, n_circle)
-    H, P = np.meshgrid(h, angles)
-    R = H * np.tan(np.radians(theta))
+    # 原始曲线
+    if inside_cone(start, O, OA, theta):
+        pts = cone_inner_cycloid(start, O, O + OA, n_rough=num) # 使用 O+OA 作为点 A
+        hit_pt = None
+    else:
+        line_pts = straight_to_cone(start, O, theta, n_rough=2)
+        cycl_pts = cone_inner_cycloid(line_pts[-1], O, O + OA, n_rough=400) # 使用 O+OA 作为点 A
+        pts = np.vstack([line_pts[:-1], cycl_pts])   # 组合为一条连续曲线
+        hit_pt = line_pts[-1]                        # hit 点
+        # 计算直线始末点之间的距离
+        line_length = np.linalg.norm(line_pts[-1] - line_pts[0])
+        # 快速计算每个点与前一个点的距离之和
+        # 方法1：使用np.diff计算相邻点之间的差值，然后计算欧几里得距离
+        point_diffs = np.diff(cycl_pts, axis=0)  # 计算相邻点之间的差值向量
+        segment_lengths = np.linalg.norm(point_diffs, axis=1)  # 计算每个线段的长度
+        cycl_length = np.sum(segment_lengths)  # 计算总长度
 
-    e1 = normalize(np.cross(k, [0, 0, 1] if abs(k[2]) < 0.9 else [1, 0, 0]))
-    e2 = np.cross(k, e1)
+        line_num = max(int(num * line_length / (line_length + cycl_length)), 2)
+        cycl_num = num - line_num + 1
+        line_pts = straight_to_cone(start, O, theta, n_rough=line_num)
+        cycl_pts = cone_inner_cycloid(line_pts[-1], O, O + OA, n_rough=cycl_num)
+        pts = np.vstack([line_pts[:-1], cycl_pts])  
 
-    X = O[0] + R * np.cos(P) * e1[0] + R * np.sin(P) * e2[0] + H * k[0]
-    Y = O[1] + R * np.cos(P) * e1[1] + R * np.sin(P) * e2[1] + H * k[1]
-    Z = O[2] + R * np.cos(P) * e1[2] + R * np.sin(P) * e2[2] + H * k[2]
-    return X, Y, Z
+    return pts
 
-if __name__ == '__main':
-    # ------------ 场景参数 ------------
-    O = np.array([0., 0., 0.])
-    A = np.array([0., 0., 2.])
-    theta = 30.
+# ---------------- 绘图（含标记） ----------------
+if __name__ == "__main__":
+    B = np.array([2, 3, 1])
+    O = np.array([0, 0, 0])
+    traj, hit = generate_cone_trajectory(B, O, 200, theta=30)
 
-    B_points = [
-        np.array([2., 1., 1.5]),
-        np.array([3., 2., 2.]),
-        np.array([-1.5, -1., 1.]),
-        np.array([2.5, -2., 0.5]),
-    ]
-    colors = ['crimson', 'lime', 'orange', 'magenta']
+    fig = go.Figure()
 
-    # ------------ 绘图 ------------
-    data = []
+    # 整条轨迹
+    fig.add_trace(go.Scatter3d(
+        x=traj[:, 0], y=traj[:, 1], z=traj[:, 2],
+        mode='lines+markers',
+        line=dict(color='royalblue', width=5),
+        name='B→O curve'))
 
-    for B0, color in zip(B_points, colors):
-        traj, acts = generate_cone_trajectory(O, A, B0, theta)
-        # 轨迹线
-        data.append(go.Scatter3d(x=traj[:, 0], y=traj[:, 1], z=traj[:, 2],
-                                mode='lines', line=dict(color=color, width=4),
-                                name=f'traj-{color}'))
-        # 起点
-        data.append(go.Scatter3d(x=[B0[0]], y=[B0[1]], z=[B0[2]],
-                                mode='markers', marker=dict(size=6, color=color),
-                                name=f'start-{color}'))
-        # 稀疏箭头
-        mask = np.arange(0, len(acts), max(1, len(acts)//20))
-        for i in mask:
-            p, v = traj[i], acts[i] * 0.1
-            data.append(go.Cone(x=[p[0]], y=[p[1]], z=[p[2]],
-                                u=[v[0]], v=[v[1]], w=[v[2]],
-                                colorscale=[[0, color], [1, color]],
-                                sizeref=0.3, showscale=False, anchor='tail'))
+    # 起点（红色球）
+    fig.add_trace(go.Scatter3d(
+        x=[B[0]], y=[B[1]], z=[B[2]],
+        mode='markers',
+        marker=dict(color='red', size=10),
+        name='start'))
 
-    # 圆锥
-    X, Y, Z = create_cone_mesh(O, A, theta)
-    data.append(go.Surface(x=X, y=Y, z=Z, opacity=0.25, colorscale='Blues',
-                        showscale=False, name='cone'))
+    # 终点（绿色球）
+    fig.add_trace(go.Scatter3d(
+        x=[O[0]], y=[O[1]], z=[O[2]],
+        mode='markers',
+        marker=dict(color='green', size=10),
+        name='end'))
 
-    # ------------ 布局 ------------
-    fig = go.Figure(data=data)
-    xyz = np.vstack([O, A] + B_points)
-    margin = 0.5
-    mins, maxs = xyz.min(axis=0) - margin, xyz.max(axis=0) + margin
-    fig.update_layout(
-        scene=dict(xaxis=dict(range=[mins[0], maxs[0]], title='X'),
-                yaxis=dict(range=[mins[1], maxs[1]], title='Y'),
-                zaxis=dict(range=[mins[2], maxs[2]], title='Z'),
-                aspectmode='cube'),
-        title='Cone Grasp – Strict End at O',
-        margin=dict(l=0, r=0, t=40, b=0)
-    )
+    # hit 点（如果存在，黄色球）
+    if hit is not None:
+        fig.add_trace(go.Scatter3d(
+            x=[hit[0]], y=[hit[1]], z=[hit[2]],
+            mode='markers',
+            marker=dict(color='yellow', size=10),
+            name='hit'))
 
-    fig.write_html("cone_strict_end.html")
-    print("已生成交互式网页：cone_strict_end.html")
-    fig.show()
+    # 圆锥面
+    h = 4
+    t, a = np.linspace(0, h, 50), np.linspace(0, 2*np.pi, 64)
+    T, A = np.meshgrid(t, a)
+    R = T * np.tan(np.radians(30))
+    fig.add_trace(go.Surface(x=R*np.cos(A), y=-T, z=R*np.sin(A),
+                             opacity=0.2, colorscale='Blues', showscale=False))
+
+    fig.update_layout(scene=dict(aspectmode='cube'),
+                      title='Cone Trajectory with Start / End / Hit Markers')
+    fig.write_html("cone_trajectory.html")
