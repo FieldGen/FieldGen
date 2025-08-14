@@ -17,7 +17,7 @@ def bezier_curve(points, num):
 
 def generate_bezier_trajectory(start, end, num=200, safe_plane_y=-0.2):
     # 判断起点在安全平面左还是右
-    if start[1] < safe_plane_y:
+    if start[1] > safe_plane_y:
         # 左侧，5点
         P0 = np.array([start[0], safe_plane_y, start[2]])
         P1 = np.array([start[0], safe_plane_y, end[2]])
