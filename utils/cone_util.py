@@ -19,7 +19,7 @@ def angle_between(u, v):
     u, v = normalize(u), normalize(v)
     return np.arccos(np.clip(np.dot(u, v), -1.0, 1.0))
 
-# ---------------- 运动模型（保留原逻辑） ----------------
+# ---------------- 运动模型 ----------------
 def compute_action_smooth(O, A, B, theta, alpha=1.0, beta=1.0):
     OA, OB = A - O, B - O
     r = np.linalg.norm(OB)
@@ -49,9 +49,7 @@ def compute_action_smooth(O, A, B, theta, alpha=1.0, beta=1.0):
     return (alpha_eff * dir_along + beta * dir_radial) * r
 
 # ------------ 轨迹生成（步长裁剪 + 强制到位） ------------
-def generate_cone_trajectory(start, end, num, theta=30,
-                                 dt=0.05,
-                                 eps_stop=1e-4):
+def generate_cone_trajectory(start, end, num, theta=30, dt=0.05, eps_stop=1e-4):
     traj, acts = [end.copy()], []
     for step in range(num):
         cur = traj[-1]
@@ -61,7 +59,7 @@ def generate_cone_trajectory(start, end, num, theta=30,
             return np.array(traj), np.array(acts)
 
         # 方向、速度、裁剪
-        A = [start[0], start[1] + 1, start[2]]
+        A = [start[0], start[1] - 1, start[2]]
         v = compute_action_smooth(start, A, cur, theta)
         v_len = np.linalg.norm(v)
         if v_len == 0:                    # 已在 O
@@ -74,8 +72,8 @@ def generate_cone_trajectory(start, end, num, theta=30,
         acts.append(step_vec / dt)
 
     # 若未收敛，也强制终点为 O
-    traj.append(O)
-    return np.array(traj), np.array(acts)
+    traj.append(start)
+    return np.array(traj)
 
 # ------------ 圆锥网格 ------------
 def create_cone_mesh(O, A, theta, height=2.5, n_circle=64, n_gen=50):
