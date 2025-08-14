@@ -1,7 +1,7 @@
 # Configuration file for curve generation
 # Specify the type of curve generation and input file paths
 
-curve_type: bezier  # Options: bezier, cone
-root_path: /home/agiuser/Application/trans/sample_processed
+curve_type: cone # Options: bezier, cone
+root_path: /mnt/zhouxinyu/sample_processed
 output_path: ./outputs/
 trunk_size: 32
