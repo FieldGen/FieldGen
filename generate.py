@@ -64,7 +64,11 @@ def generate_episode(output_dir, episode_id, curve, rpy_state, imgs):
         g_effector = h5_file.create_group('effector')
         g_effector.create_dataset('position', data=curve)
 
-    # Visualization of combined_data
+    visualize_curve_with_rpy(curve, rpy_state, episode_path)
+
+    # print(f"Episode {episode_id} generated: {episode_path}")
+
+def visualize_curve_with_rpy(curve, rpy_state, episode_path):
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
 
@@ -75,14 +79,18 @@ def generate_episode(output_dir, episode_id, curve, rpy_state, imgs):
     ax.scatter(curve[0, 0], curve[0, 1], curve[0, 2], color='green', label='Start', s=50)
     ax.scatter(curve[-1, 0], curve[-1, 1], curve[-1, 2], color='orange', label='End', s=50)
 
+    # Determine dynamic length based on y-axis scale
+    y_range = ax.get_ylim()
+    dynamic_length = (y_range[1] - y_range[0]) * 0.2  # 1% of y-axis range
+
     # Visualize rpy as rotation directions
     for i in range(len(curve)):
         rotation = R.from_euler('xyz', rpy_state[i])
-        direction = rotation.apply([1, 0, 0])  # Use x-axis as reference direction
+        direction = rotation.apply([0, 0, 1])  # Use y-axis as reference direction
         ax.quiver(
             curve[i, 0], curve[i, 1], curve[i, 2],
             direction[0], direction[1], direction[2],
-            length=0.005, color='red', arrow_length_ratio=0.3
+            length=dynamic_length, color='red', arrow_length_ratio=0.3
         )
 
     ax.set_xlabel('X')
@@ -94,8 +102,6 @@ def generate_episode(output_dir, episode_id, curve, rpy_state, imgs):
     plot_path = os.path.join(episode_path, 'curve_visualization.png')
     plt.savefig(plot_path)
     plt.close()
-
-    # print(f"Episode {episode_id} generated: {episode_path}")
 
 def main():
     # Load configuration
