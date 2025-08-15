@@ -15,7 +15,8 @@ def bezier_curve(points, num):
         curve += binom * ((1 - t) ** (n - i))[:, None] * (t ** i)[:, None] * points[i]
     return curve
 
-def generate_bezier_trajectory(start, end, num=200, safe_plane_y=-0.2):
+def generate_bezier_trajectory(start, end, num=200):
+    safe_plane_y = end[1]
     # 判断起点在安全平面左还是右
     if start[1] > safe_plane_y:
         # 左侧，5点
