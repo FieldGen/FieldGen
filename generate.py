@@ -5,7 +5,6 @@ import numpy as np
 from PIL import Image
 from tqdm import tqdm
 from mpl_toolkits.mplot3d import Axes3D
-from scipy.spatial.transform import Rotation as R
 import time
 
 from utils.visualize_points import visualize_curve_with_rpy

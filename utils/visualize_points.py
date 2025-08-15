@@ -5,6 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+from scipy.spatial.transform import Rotation as R
 
 def visualize_curve_with_rpy(combined_data, episode_path):
     fig = plt.figure()
