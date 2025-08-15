@@ -1,0 +1,32 @@
+# .gitignore for Python projects
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+*.log
+*.sqlite3
+*.db
+*.DS_Store
+.env
+.venv
+venv/
+ENV/
+.env.*
+.idea/
+.vscode/
+*.swp
+bezier_plot.png
+# Node.js (if any node usage)
+node_modules/
+package-lock.json
+yarn.lock
+npm-debug.log
+*.html
+*.jpg
+outputs/
