@@ -166,7 +166,7 @@ def visualize_point_distribution():
     Loads endpoint data from an H5 file and visualizes the 3D point distribution
     and 2D density maps.
     """
-    # Load configuration to find the data path
+    # Load configuration to find task data paths (support multiple tasks)
     config_path = os.path.join('config', 'config.yaml')
     if not os.path.exists(config_path):
         print(f"错误：配置文件未找到于 '{config_path}'")
@@ -175,59 +175,83 @@ def visualize_point_distribution():
 
     with open(config_path, 'r') as file:
         config = yaml.safe_load(file)
-    
-    root_path = config.get('root_path')
-    if not root_path or not os.path.exists(root_path):
-        print(f"错误：在 config.yaml 中配置的 root_path 未找到: {root_path}")
-        return
 
-    # Process H5 file
-    h5_path = os.path.join(root_path, 'sample_points.h5')
-    if not os.path.exists(h5_path):
-        print(f"错误：数据文件未找到于: {h5_path}")
-        return
+    tasks_cfg = config.get('tasks')
 
-    print(f"正在处理 {h5_path}...")
-
-    with h5py.File(h5_path, 'r') as h5_data:
-        if 'state/eef/position' not in h5_data:
-            print(f"错误：在 H5 文件中未找到 'state/eef/position' 数据集。")
+    task_list = []
+    # If tasks specified, use them; otherwise fall back to single root_path for backward compatibility
+    if tasks_cfg:
+        for tname, t in tasks_cfg.items():
+            tpath = t.get('path')
+            if not tpath:
+                print(f"警告：task {tname} 未配置 path，已跳过。")
+                continue
+            task_list.append({'name': tname, 'path': tpath})
+    else:
+        root_path = config.get('root_path')
+        if not root_path:
+            print("错误：config 中既没有 'tasks' 也没有 'root_path'。请配置数据路径。")
             return
-        if 'endpoint' not in h5_data:
-            print(f"错误：在 H5 文件中未找到 'endpoint' 数据集。")
-            return
-            
-        eef_positions = np.array(h5_data['state/eef/position'])
-        # Load endpoint data (consistent with generate.py)
-        endpoint_data = np.array(h5_data['endpoint'])
-    
-    # Extract XYZ coordinates (based on generate.py, indices 6, 7, 8 are XYZ)
-    if eef_positions.shape[1] < 9:
-        print(f"错误：数据点维度不足。需要至少9个维度，但只有 {eef_positions.shape[1]}。")
-        return
-        
-    points_xyz = eef_positions[:, 6:9]
-    endpoint_xyz = endpoint_data[6:9]
-    
-    print(f"已加载 {len(points_xyz)} 个点。正在生成可视化图表...")
+        task_list.append({'name': 'default', 'path': root_path})
 
-    # --- Generate and save 3D scatter plot ---
-    fig_3d = create_3d_scatter_plot(points_xyz, endpoint_xyz)
-    output_3d_filename = 'point_distribution_3d.html'
-    fig_3d.write_html(output_3d_filename)
+    any_processed = False
+    for t in task_list:
+        root_path = t['path']
+        tname = t['name']
 
-    # --- Generate and save 2D density plots ---
-    fig_2d = create_2d_density_plots(points_xyz)
-    output_2d_filename = 'point_distribution_2d_density.html'
-    fig_2d.write_html(output_2d_filename)
-    
-    print("\n" + "="*60)
-    print("           可视化完成")
-    print("="*60)
-    print(f"1. 交互式三维散点图已保存至: {os.path.abspath(output_3d_filename)}")
-    print(f"2. 三视图密度图已保存至: {os.path.abspath(output_2d_filename)}")
-    print("\n请在您的浏览器中打开这些 HTML 文件以查看。")
-    print("="*60)
+        if not os.path.exists(root_path):
+            print(f"警告：任务 {tname} 的路径不存在: {root_path}，已跳过。")
+            continue
+
+        h5_path = os.path.join(root_path, 'sample_points.h5')
+        if not os.path.exists(h5_path):
+            print(f"警告：数据文件未找到于: {h5_path}（任务 {tname}），已跳过。")
+            continue
+
+        print(f"正在处理任务 {tname} 的文件: {h5_path}...")
+
+        with h5py.File(h5_path, 'r') as h5_data:
+            if 'state/eef/position' not in h5_data:
+                print(f"错误：在 H5 文件中未找到 'state/eef/position' 数据集（任务 {tname}）。")
+                continue
+            if 'endpoint' not in h5_data:
+                print(f"错误：在 H5 文件中未找到 'endpoint' 数据集（任务 {tname}）。")
+                continue
+
+            eef_positions = np.array(h5_data['state/eef/position'])
+            endpoint_data = np.array(h5_data['endpoint'])
+
+        if eef_positions.shape[1] < 9:
+            print(f"错误：数据点维度不足（任务 {tname}）。需要至少9个维度，但只有 {eef_positions.shape[1]}。")
+            continue
+
+        points_xyz = eef_positions[:, 6:9]
+        endpoint_xyz = endpoint_data[6:9]
+
+        print(f"已加载 {len(points_xyz)} 个点（任务 {tname}）。正在生成可视化图表...")
+
+        # Generate and save 3D scatter plot
+        fig_3d = create_3d_scatter_plot(points_xyz, endpoint_xyz)
+        output_3d_filename = f'point_distribution_3d_{tname}.html'
+        fig_3d.write_html(output_3d_filename)
+
+        # Generate and save 2D density plots
+        fig_2d = create_2d_density_plots(points_xyz)
+        output_2d_filename = f'point_distribution_2d_density_{tname}.html'
+        fig_2d.write_html(output_2d_filename)
+
+        print("\n" + "="*60)
+        print(f"任务 {tname} 的可视化完成")
+        print("="*60)
+        print(f"1. 交互式三维散点图已保存至: {os.path.abspath(output_3d_filename)}")
+        print(f"2. 三视图密度图已保存至: {os.path.abspath(output_2d_filename)}")
+        print("请在您的浏览器中打开这些 HTML 文件以查看。")
+        print("="*60 + "\n")
+
+        any_processed = True
+
+    if not any_processed:
+        print("未处理任何任务。请检查配置文件和数据路径。")
 
 
 if __name__ == "__main__":
