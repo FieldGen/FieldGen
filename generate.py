@@ -88,19 +88,26 @@ def main():
     curve_type = gen_cfg.get('curve_type', 'bezier')
     chunk_size = gen_cfg.get('chunk_size', 32)
     output_path = gen_cfg.get('output_path', 'output/')
-    max_trajectories = gen_cfg.get('max_trajectories', None)  # Get max trajectories from config
     beta = gen_cfg.get('beta', 0.003)
 
-    # Tasks configuration: multiple input folders with per-task ratios
+    # Tasks configuration: multiple input folders with per-task max_trajectories
     tasks_cfg = config.get('tasks', {})
     tasks = []
     for tname, t in tasks_cfg.items():
         tpath = t.get('path')
-        tratio = float(t.get('ratio', 1)) if t.get('ratio', None) is not None else 1.0
+        tmax = t.get('max_trajectories', None)
+        # Normalize null to None and ensure integers when provided
+        if tmax is not None:
+            try:
+                tmax = int(tmax)
+                if tmax < 0:
+                    tmax = None
+            except Exception:
+                tmax = None
         if not tpath:
             print(f"Warning: task {tname} has no path, skipping")
             continue
-        tasks.append({'name': tname, 'path': tpath, 'ratio': max(0.0, tratio)})
+        tasks.append({'name': tname, 'path': tpath, 'max_trajectories': tmax})
 
     if not tasks:
         raise ValueError('No valid tasks found in config/tasks')
@@ -109,26 +116,6 @@ def main():
     stats['curve_type_used'] = curve_type
     stats['chunk_size_used'] = chunk_size
 
-    # If max_trajectories is set, distribute quotas to tasks according to ratio
-    total_ratio = sum(t['ratio'] for t in tasks)
-    task_quotas = {}
-    if max_trajectories is not None and max_trajectories > 0:
-        # Compute integer quotas, distribute remainder to largest ratios
-        raw = [max_trajectories * (t['ratio'] / total_ratio) if total_ratio > 0 else 0 for t in tasks]
-        quotas = [int(np.floor(r)) for r in raw]
-        remainder = int(max_trajectories - sum(quotas))
-        # sort tasks by fractional part descending
-        frac = [(i, raw[i] - quotas[i]) for i in range(len(tasks))]
-        frac.sort(key=lambda x: x[1], reverse=True)
-        for i in range(remainder):
-            quotas[frac[i][0]] += 1
-        for idx, t in enumerate(tasks):
-            task_quotas[t['path']] = quotas[idx]
-    else:
-        # No global cap: quotas will be None meaning process all
-        for t in tasks:
-            task_quotas[t['path']] = None
-
     episode_cnt = 0
     len_min = 10000
     episode_id = 0
@@ -136,7 +123,7 @@ def main():
     # Iterate over tasks
     for t in tasks:
         root_path = t['path']
-        quota = task_quotas.get(root_path)
+        max_trajectories = t['max_trajectories']
 
         if not os.path.exists(root_path):
             print(f"Warning: root directory for task {t['name']} not found: {root_path}. Skipping task.")
@@ -147,7 +134,7 @@ def main():
             print(f"Warning: {h5_path} does not exist for task {t['name']}. Skipping task.")
             continue
 
-        print(f"Processing task {t['name']} -> {h5_path} (quota: {quota})...")
+        print(f"Processing task {t['name']} -> {h5_path} (quota: {max_trajectories})...")
 
         with h5py.File(h5_path, 'r') as h5_data:
             endpoint = h5_data['endpoint'][6:12]
@@ -167,8 +154,8 @@ def main():
             }
 
         # Determine number to process for this task
-        if quota is not None and quota > 0:
-            items_to_process = min(quota, len(eef_positions))
+        if max_trajectories is not None and max_trajectories > 0:
+            items_to_process = min(max_trajectories, len(eef_positions))
             print(f"  限制处理轨迹数量: {items_to_process} (任务配额)")
         else:
             items_to_process = len(eef_positions)

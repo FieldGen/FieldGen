@@ -2,17 +2,17 @@
 # Specify the type of curve generation and input file paths
 generate:
   curve_type: bezier # Options: bezier, cone
-  output_path: /mnt/yekehe/chunk_train_mul
+  output_path: /mnt/yekehe/chunk_train_1k8
   chunk_size: 35  
-  max_trajectories: null # Maximum number of trajectories to process (null for no limit)
   beta: 0.005
 
 tasks:
-  task1:
-    name: pick
+  pick1:
     path: /mnt/public/zhouxinyu/sample_processed_pos1
-    ratio: 1
-  task2:
-    name: pick2
+    max_trajectories: 600
+  pick2:
     path: /mnt/public/zhouxinyu/sample_processed_pos2
-    ratio: 1
+    max_trajectories: 600
+  pick3:
+    path: /mnt/public/zhouxinyu/sample_processed_pos3
+    max_trajectories: 600
