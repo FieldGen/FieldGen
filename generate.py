@@ -163,8 +163,10 @@ def main():
 
         per_task_stats[t['name']]['items_to_process'] = items_to_process
 
-        # Loop through eef positions for this task
-        for eef_id, eef_position in enumerate(tqdm(eef_positions[:items_to_process], desc=f"Processing {t['name']}")):
+        # Randomly sample items_to_process indices from eef_positions
+        sampled_indices = np.random.choice(len(eef_positions), size=items_to_process, replace=False)
+        for eef_id in tqdm(sampled_indices, desc=f"Processing {t['name']}"):
+            eef_position = eef_positions[eef_id]
             xyz_start = eef_position[6:9]
             xyz_end = endpoint[0:3]
             # Generate the curve
