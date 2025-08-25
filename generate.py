@@ -182,6 +182,7 @@ def main():
                 continue
 
             if xyz_start[1] < xyz_end[1]:
+                per_task_stats[t['name']]['skipped_episodes'] += 1
                 continue
 
             # Update per-task curve statistics
