@@ -163,9 +163,14 @@ def main():
 
         per_task_stats[t['name']]['items_to_process'] = items_to_process
 
-        # Randomly sample items_to_process indices from eef_positions
-        sampled_indices = np.random.choice(len(eef_positions), size=items_to_process, replace=False)
-        for eef_id in tqdm(sampled_indices, desc=f"Processing {t['name']}"):
+        # Use a while loop to ensure exactly items_to_process valid episodes are generated
+        sampled_indices = np.random.permutation(len(eef_positions))
+        valid_count = 0
+        idx_ptr = 0
+        pbar = tqdm(total=items_to_process, desc=f"Processing {t['name']}")
+        while valid_count < items_to_process and idx_ptr < len(sampled_indices):
+            eef_id = sampled_indices[idx_ptr]
+            idx_ptr += 1
             eef_position = eef_positions[eef_id]
             xyz_start = eef_position[6:9]
             xyz_end = endpoint[0:3]
@@ -174,6 +179,9 @@ def main():
             curve_length = len(curve)
             if curve_length == 0:
                 per_task_stats[t['name']]['skipped_episodes'] += 1
+                continue
+
+            if xyz_start[1] < xyz_end[1]:
                 continue
 
             # Update per-task curve statistics
@@ -205,15 +213,16 @@ def main():
             left_curve = np.tile(eef_position[0:3], (curve_length, 1))
             left_rpy = np.tile(eef_position[3:6], (curve_length, 1))
 
-            combined_data = np.hstack((left_curve, left_rpy, curve, rpy_state))
+            combined_data = np.hstack((left_curve, left_rpy, curve, rpy_state)
+            )
 
             img_path = os.path.join(root_path, 'camera', str(eef_id))
             if not os.path.exists(img_path):
                 per_task_stats[t['name']]['missing_image_paths'] += 1
                 per_task_stats[t['name']]['skipped_episodes'] += 1
                 stats['total_missing_image_paths'] += 1
-                print(f"Warning: Image path {img_path} does not exist. Break at eef_id {eef_id}.")
-                break
+                print(f"Warning: Image path {img_path} does not exist. Skipping eef_id {eef_id}.")
+                continue
 
             # Load images from the specified path and create a dictionary with image names as keys
             img_files = [img for img in os.listdir(img_path) if img.endswith('.jpg')]
@@ -231,6 +240,9 @@ def main():
             episode_cnt += 1
             per_task_stats[t['name']]['successful_episodes'] += 1
             stats['total_successful_episodes'] += 1
+            valid_count += 1
+            pbar.update(1)
+        pbar.close()
     
     # Calculate processing time
     end_time = time.time()
