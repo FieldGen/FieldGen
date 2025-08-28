@@ -174,14 +174,15 @@ def main():
             eef_position = eef_positions[eef_id]
             xyz_start = eef_position[6:9]
             xyz_end = endpoint[0:3]
+
+            # if xyz_start[1] > xyz_end[1]:
+            #     per_task_stats[t['name']]['skipped_episodes'] += 1
+            #     continue
+
             # Generate the curve
             curve = generate_curve(curve_type, xyz_start, xyz_end, beta)
             curve_length = len(curve)
             if curve_length == 0:
-                per_task_stats[t['name']]['skipped_episodes'] += 1
-                continue
-
-            if xyz_start[1] < xyz_end[1]:
                 per_task_stats[t['name']]['skipped_episodes'] += 1
                 continue
 
