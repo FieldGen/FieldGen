@@ -27,13 +27,39 @@ def straight_to_cone(B, O, theta, n_rough=400):
     沿 y 轴负方向（OA=[0,-1,0]）直线与圆锥面相交
     圆锥方程：sqrt(x²+z²) = -m·y  (y<0)
     """
+    # m = np.tan(np.radians(theta))
+    # Bp = B - O                                   # 相对顶点
+    # y0 = Bp[1]                                   # 当前 y
+    # r_horiz = np.linalg.norm([Bp[0], Bp[2]])     # 径向距离
+    # # t 满足  r_horiz = -m (y0 - t)  且 y0 - t < 0
+    # t = y0 + r_horiz / m
+    # hit = B + np.array([0, -t, 0])         # 沿 y 轴负方向
     m = np.tan(np.radians(theta))
-    Bp = B - O                                   # 相对顶点
-    y0 = Bp[1]                                   # 当前 y
-    r_horiz = np.linalg.norm([Bp[0], Bp[2]])     # 径向距离
-    # t 满足  r_horiz = -m (y0 - t)  且 y0 - t < 0
-    t = y0 + r_horiz / m
-    hit = B + np.array([0, -t, 0])         # 沿 y 轴负方向
+
+    # 1. 把问题降到平面 OAB 内的 2D 坐标系
+    OA = np.array([0, -1, 0])          # 圆锥轴向下
+    OB = B - O
+    n_plane = np.cross(OB, OA)
+    if np.allclose(n_plane, 0):        # B 在轴上，退化
+        return straight_to_cone(B, O, theta, n_rough)
+
+    n_plane /= np.linalg.norm(n_plane)
+    x_axis = np.cross(OA, n_plane)
+    x_axis /= np.linalg.norm(x_axis)
+
+    # 2D 坐标 (u,v)：x_axis→u, OA→v
+    u0 = np.dot(OB, x_axis)
+    v0 = np.dot(OB, OA)
+
+    # 2. 圆锥在该平面内的交线：u = ± m v (v<0)
+    # 内法线方向由 u^2 - m^2 v^2 = 0 的负梯度给出：
+    #   (-u, m^2 v)  需与 (u-u0, v-v0) 平行
+    # 解得：
+    v_hit = (u0**2 + m**2 * v0**2) / (2 * m**2 * v0)
+    u_hit = np.sign(u0) * m * v_hit      # 保持与 u0 同号
+
+    # 3. 回到 3D
+    hit = O + u_hit * x_axis + v_hit * OA
     
     # 在B和hit之间生成n_rough个非均匀分布的点
     # 越靠近终点O（hit点），步幅越小
