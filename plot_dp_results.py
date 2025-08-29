@@ -24,11 +24,11 @@ experiments = {
         "teleop_data": "100 episodes",
         "dp": [
             {"time": 3.15, "data": 900, "success": 0},
-            {"time": 4.30, "data": 1800, "success": 10},
-            {"time": 5.46, "data": 2700, "success": 70},
-            {"time": 6.61, "data": 3600, "success": 50},
+            {"time": 4.30, "data": 1800, "success": 60},
+            {"time": 5.46, "data": 2700, "success": 100},
+            {"time": 6.61, "data": 3600, "success": 70},
             {"time": 7.76, "data": 4500, "success": 80},
-            {"time": 8.91, "data": 5400, "success": 80},
+            {"time": 8.91, "data": 5400, "success": 100},
         ],
     },
     "Rotate(Narrow) Pick": {
