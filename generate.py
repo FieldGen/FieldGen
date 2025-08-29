@@ -183,9 +183,8 @@ def main():
             curve = generate_curve(curve_type, xyz_start, xyz_end, beta)
             curve_length = len(curve)
             if curve_length == 0:
-                per_task_stats[t['name']]['skipped_episodes'] += 1
-                continue
-
+                curve = np.vstack([curve, xyz_end[np.newaxis, :]])
+                curve_length = 1
             # Update per-task curve statistics
             per_task_stats[t['name']]['curve_lengths'].append(curve_length)
 

@@ -22,7 +22,7 @@ def inside_cone(B, O, OA, theta):
     return phi <= np.radians(theta)
 
 # ---------- 直线沿 y 轴负方向到圆锥面 ----------
-def straight_to_cone(B, O, theta, n_rough=400):
+def straight_to_cone(B, O, theta, n_rough=400, vertical = False):
     """
     沿 y 轴负方向（OA=[0,-1,0]）直线与圆锥面相交
     圆锥方程：sqrt(x²+z²) = -m·y  (y<0)
@@ -34,32 +34,43 @@ def straight_to_cone(B, O, theta, n_rough=400):
     # # t 满足  r_horiz = -m (y0 - t)  且 y0 - t < 0
     # t = y0 + r_horiz / m
     # hit = B + np.array([0, -t, 0])         # 沿 y 轴负方向
+
     m = np.tan(np.radians(theta))
+    Bp = B - O                      # 相对顶点
+    z0 = Bp[2]                      # 当前 z
+    r_horiz = np.linalg.norm([Bp[0], Bp[1]])  # 径向距离
 
-    # 1. 把问题降到平面 OAB 内的 2D 坐标系
-    OA = np.array([0, -1, 0])          # 圆锥轴向下
-    OB = B - O
-    n_plane = np.cross(OB, OA)
-    if np.allclose(n_plane, 0):        # B 在轴上，退化
-        return straight_to_cone(B, O, theta, n_rough)
+    # 直线方程： Bp + t·[0,0,1] 代入圆锥
+    # r_horiz = m * (z0 + t)   且 z0 + t >= 0
+    t = r_horiz / m - z0
+    hit = B + np.array([0, 0, t])
 
-    n_plane /= np.linalg.norm(n_plane)
-    x_axis = np.cross(OA, n_plane)
-    x_axis /= np.linalg.norm(x_axis)
+    # m = np.tan(np.radians(theta))
 
-    # 2D 坐标 (u,v)：x_axis→u, OA→v
-    u0 = np.dot(OB, x_axis)
-    v0 = np.dot(OB, OA)
+    # # 1. 把问题降到平面 OAB 内的 2D 坐标系
+    # OA = np.array([0, -1, 0])          # 圆锥轴向下
+    # OB = B - O
+    # n_plane = np.cross(OB, OA)
+    # if np.allclose(n_plane, 0):        # B 在轴上，退化
+    #     return straight_to_cone(B, O, theta, n_rough)
 
-    # 2. 圆锥在该平面内的交线：u = ± m v (v<0)
-    # 内法线方向由 u^2 - m^2 v^2 = 0 的负梯度给出：
-    #   (-u, m^2 v)  需与 (u-u0, v-v0) 平行
-    # 解得：
-    v_hit = (u0**2 + m**2 * v0**2) / (2 * m**2 * v0)
-    u_hit = np.sign(u0) * m * v_hit      # 保持与 u0 同号
+    # n_plane /= np.linalg.norm(n_plane)
+    # x_axis = np.cross(OA, n_plane)
+    # x_axis /= np.linalg.norm(x_axis)
 
-    # 3. 回到 3D
-    hit = O + u_hit * x_axis + v_hit * OA
+    # # 2D 坐标 (u,v)：x_axis→u, OA→v
+    # u0 = np.dot(OB, x_axis)
+    # v0 = np.dot(OB, OA)
+
+    # # 2. 圆锥在该平面内的交线：u = ± m v (v<0)
+    # # 内法线方向由 u^2 - m^2 v^2 = 0 的负梯度给出：
+    # #   (-u, m^2 v)  需与 (u-u0, v-v0) 平行
+    # # 解得：
+    # v_hit = (u0**2 + m**2 * v0**2) / (2 * m**2 * v0)
+    # u_hit = np.sign(u0) * m * v_hit      # 保持与 u0 同号
+
+    # # 3. 回到 3D
+    # hit = O + u_hit * x_axis + v_hit * OA
     
     # 在B和hit之间生成n_rough个非均匀分布的点
     # 越靠近终点O（hit点），步幅越小
@@ -144,9 +155,12 @@ def cone_inner_cycloid(B, O, A, n_rough=200):
     return curve[::-1]
 
 # ---------- 主轨迹（带标记） ----------
-def generate_cone_trajectory(start, end, num, theta=60):
+def generate_cone_trajectory(start, end, num, theta=60, vertical = False):
     O  = np.asarray(end, dtype=float)
-    OA = np.array([0, -1, 0])
+    if vertical:
+        OA = np.array([0, 0, 1])
+    else:
+        OA = np.array([0, -1, 0])
     OA = normalize(OA)
 
     # 原始曲线
@@ -154,7 +168,7 @@ def generate_cone_trajectory(start, end, num, theta=60):
         pts = cone_inner_cycloid(start, O, O + OA, n_rough=num) # 使用 O+OA 作为点 A
         hit_pt = None
     else:
-        line_pts = straight_to_cone(start, O, theta, n_rough=2)
+        line_pts = straight_to_cone(start, O, theta, n_rough=2, vertical=vertical) # 先粗略求交点
         cycl_pts = cone_inner_cycloid(line_pts[-1], O, O + OA, n_rough=400) # 使用 O+OA 作为点 A
         pts = np.vstack([line_pts[:-1], cycl_pts])   # 组合为一条连续曲线
         hit_pt = line_pts[-1]                        # hit 点
@@ -167,7 +181,7 @@ def generate_cone_trajectory(start, end, num, theta=60):
         cycl_length = np.sum(segment_lengths)  # 计算总长度
 
         line_num = max(int(num * line_length / (line_length + cycl_length)), 2)
-        cycl_num = num - line_num + 1
+        cycl_num = max(1, num - line_num + 1)
         line_pts = straight_to_cone(start, O, theta, n_rough=line_num)
         cycl_pts = cone_inner_cycloid(line_pts[-1], O, O + OA, n_rough=cycl_num)
         pts = np.vstack([line_pts[:-1], cycl_pts])  
