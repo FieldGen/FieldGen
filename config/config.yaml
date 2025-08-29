@@ -1,12 +1,12 @@
 # Configuration file for curve generation
 # Specify the type of curve generation and input file paths
 generate:
-  curve_type: bezier # Options: bezier, cone
-  output_path: /mnt/zhouxinyu/simsample/chunk_train_3600
+  curve_type: cone # Options: bezier, cone
+  output_path: /mnt/zhouxinyu/fieldgen_task_verpick/chunk_train_900
   chunk_size: 35  
   beta: 0.003
 
 tasks:
   pick1:
-    path: /mnt/public/zhouxinyu/separated/episode0
-    max_trajectories: 3600
+    path: /mnt/public/yekehe/separated/episode0
+    max_trajectories: 900
