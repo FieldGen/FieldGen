@@ -22,28 +22,28 @@ def inside_cone(B, O, OA, theta):
     return phi <= np.radians(theta)
 
 # ---------- 直线沿 y 轴负方向到圆锥面 ----------
-def straight_to_cone(B, O, theta, n_rough=400, vertical = False):
+def straight_to_cone(B, O, theta, n_rough=400):
     """
     沿 y 轴负方向（OA=[0,-1,0]）直线与圆锥面相交
     圆锥方程：sqrt(x²+z²) = -m·y  (y<0)
     """
-    # m = np.tan(np.radians(theta))
-    # Bp = B - O                                   # 相对顶点
-    # y0 = Bp[1]                                   # 当前 y
-    # r_horiz = np.linalg.norm([Bp[0], Bp[2]])     # 径向距离
-    # # t 满足  r_horiz = -m (y0 - t)  且 y0 - t < 0
-    # t = y0 + r_horiz / m
-    # hit = B + np.array([0, -t, 0])         # 沿 y 轴负方向
-
     m = np.tan(np.radians(theta))
-    Bp = B - O                      # 相对顶点
-    z0 = Bp[2]                      # 当前 z
-    r_horiz = np.linalg.norm([Bp[0], Bp[1]])  # 径向距离
+    Bp = B - O                                   # 相对顶点
+    y0 = Bp[1]                                   # 当前 y
+    r_horiz = np.linalg.norm([Bp[0], Bp[2]])     # 径向距离
+    # t 满足  r_horiz = -m (y0 - t)  且 y0 - t < 0
+    t = y0 + r_horiz / m
+    hit = B + np.array([0, -t, 0])         # 沿 y 轴负方向
 
-    # 直线方程： Bp + t·[0,0,1] 代入圆锥
-    # r_horiz = m * (z0 + t)   且 z0 + t >= 0
-    t = r_horiz / m - z0
-    hit = B + np.array([0, 0, t])
+    # m = np.tan(np.radians(theta))
+    # Bp = B - O                      # 相对顶点
+    # z0 = Bp[2]                      # 当前 z
+    # r_horiz = np.linalg.norm([Bp[0], Bp[1]])  # 径向距离
+
+    # # 直线方程： Bp + t·[0,0,1] 代入圆锥
+    # # r_horiz = m * (z0 + t)   且 z0 + t >= 0
+    # t = r_horiz / m - z0
+    # hit = B + np.array([0, 0, t])
 
     # m = np.tan(np.radians(theta))
 
@@ -168,7 +168,7 @@ def generate_cone_trajectory(start, end, num, theta=60, vertical = False):
         pts = cone_inner_cycloid(start, O, O + OA, n_rough=num) # 使用 O+OA 作为点 A
         hit_pt = None
     else:
-        line_pts = straight_to_cone(start, O, theta, n_rough=2, vertical=vertical) # 先粗略求交点
+        line_pts = straight_to_cone(start, O, theta, n_rough=2) # 先粗略求交点
         cycl_pts = cone_inner_cycloid(line_pts[-1], O, O + OA, n_rough=400) # 使用 O+OA 作为点 A
         pts = np.vstack([line_pts[:-1], cycl_pts])   # 组合为一条连续曲线
         hit_pt = line_pts[-1]                        # hit 点
