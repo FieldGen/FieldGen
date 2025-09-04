@@ -184,7 +184,7 @@ def parse_args():
     parser.add_argument("--no-separate", action="store_true", help="不为每个 episode 生成单独 html")
     parser.add_argument("--no-combined", action="store_true", help="不生成汇总 html")
     parser.add_argument("--open", action="store_true", help="生成后尝试在浏览器打开汇总图")
-    parser.add_argument("--save_dir", type=str, default=".", help="输出的 html 保存目录 (默认项目根目录)")
+    parser.add_argument("--save_dir", type=str, default="./html", help="输出的 html 保存目录 (默认项目根目录)")
     return parser.parse_args()
 
 

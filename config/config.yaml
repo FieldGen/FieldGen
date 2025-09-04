@@ -2,11 +2,68 @@
 # Specify the type of curve generation and input file paths
 generate:
   curve_type: cone # Options: bezier, cone
-  output_path: /mnt/zhouxinyu/fieldgen_task_verpick/chunk_train_900
+  output_path: /mnt/yekehe/fieldgen_mainexp2/fieldgen
   chunk_size: 35  
-  beta: 0.003
+  beta: 0.0025
 
 tasks:
+  pick0:
+    path: /mnt/public/yekehe/fieldgen_mainexp2/separated/episode0
+    max_trajectories: 700
   pick1:
-    path: /mnt/public/yekehe/separated/episode0
-    max_trajectories: 900
+    path: /mnt/public/yekehe/fieldgen_mainexp2/separated/episode1
+    max_trajectories: 700
+  pick2:
+    path: /mnt/public/yekehe/fieldgen_mainexp2/separated/episode2
+    max_trajectories: 700
+  pick3:
+    path: /mnt/public/yekehe/fieldgen_mainexp2/separated/episode3
+    max_trajectories: 700
+  pick4:
+    path: /mnt/public/yekehe/fieldgen_mainexp2/separated/episode4
+    max_trajectories: 700
+  pick5:
+    path: /mnt/public/yekehe/fieldgen_mainexp2/separated/episode5
+    max_trajectories: 700
+  pick6:
+    path: /mnt/public/yekehe/fieldgen_mainexp2/separated/episode6
+    max_trajectories: 700
+  pick7:
+    path: /mnt/public/yekehe/fieldgen_mainexp2/separated/episode7
+    max_trajectories: 700
+  pick8:
+    path: /mnt/public/yekehe/fieldgen_mainexp2/separated/episode8
+    max_trajectories: 700
+  pick9:
+    path: /mnt/public/yekehe/fieldgen_mainexp2/separated/episode9
+    max_trajectories: 700
+  pick10:
+    path: /mnt/public/yekehe/fieldgen_mainexp2/separated/episode10
+    max_trajectories: 700
+  pick11:
+    path: /mnt/public/yekehe/fieldgen_mainexp2/separated/episode11
+    max_trajectories: 700
+  pick12:
+    path: /mnt/public/yekehe/fieldgen_mainexp2/separated/episode12
+    max_trajectories: 700
+  pick13:
+    path: /mnt/public/yekehe/fieldgen_mainexp2/separated/episode13
+    max_trajectories: 700
+  pick014:
+    path: /mnt/public/yekehe/fieldgen_mainexp2/separated/episode14
+    max_trajectories: 700
+  pick15:
+    path: /mnt/public/yekehe/fieldgen_mainexp2/separated/episode15
+    max_trajectories: 700
+  pick16:
+    path: /mnt/public/yekehe/fieldgen_mainexp2/separated/episode16
+    max_trajectories: 700
+  pick17:
+    path: /mnt/public/yekehe/fieldgen_mainexp2/separated/episode17
+    max_trajectories: 700
+  pick18:
+    path: /mnt/public/yekehe/fieldgen_mainexp2/separated/episode18
+    max_trajectories: 700
+  pick19:
+    path: /mnt/public/yekehe/fieldgen_mainexp2/separated/episode19
+    max_trajectories: 700

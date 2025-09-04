@@ -232,12 +232,12 @@ def visualize_point_distribution():
 
         # Generate and save 3D scatter plot
         fig_3d = create_3d_scatter_plot(points_xyz, endpoint_xyz)
-        output_3d_filename = f'point_distribution_3d_{tname}.html'
+        output_3d_filename = f'html/point_distribution_3d_{tname}.html'
         fig_3d.write_html(output_3d_filename)
 
         # Generate and save 2D density plots
         fig_2d = create_2d_density_plots(points_xyz)
-        output_2d_filename = f'point_distribution_2d_density_{tname}.html'
+        output_2d_filename = f'html/point_distribution_2d_density_{tname}.html'
         fig_2d.write_html(output_2d_filename)
 
         print("\n" + "="*60)
