@@ -155,13 +155,13 @@ def cone_inner_cycloid(B, O, A, n_rough=200):
     return curve[::-1]
 
 # ---------- 主轨迹（带标记） ----------
-def generate_cone_trajectory(start, end, num, theta=60, vertical = False):
+def generate_cone_trajectory(start, end, direct, num, theta=60, vertical = False):
     O  = np.asarray(end, dtype=float)
     if vertical:
         OA = np.array([0, 0, 1])
     else:
         OA = np.array([0, -1, 0])
-    OA = normalize(OA)
+    OA = normalize(direct)
 
     # 原始曲线
     if inside_cone(start, O, OA, theta):

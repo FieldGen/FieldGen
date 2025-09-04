@@ -11,19 +11,43 @@ from utils.visualize_points import visualize_curve_with_rpy
 from utils.bezier_util import generate_bezier_trajectory
 from utils.cone_util import generate_cone_trajectory
 from utils.rpy_util import generate_rpy_trajectory
+from scipy.spatial.transform import Rotation as R
 
 def curve_length(curve):
     return np.sum(np.linalg.norm(np.diff(curve, axis=0), axis=1))
 
-def generate_curve(curve_type, start, end, beta, maxn = 2000):
+def get_direct(end, rpy_end):
+    """根据末端位姿 rpy_end 计算其在世界坐标系中的朝向(取本地Z轴)的反方向单位向量。
+
+    参数:
+        end: ndarray(shape=(3,)) 末端位置(此处不参与计算, 预留接口)
+        rpy_end: ndarray(shape=(3,)) 末端的 (roll, pitch, yaw)
+    返回:
+        ndarray(shape=(3,)) 反方向单位向量
+    说明:
+        这里约定前向方向使用末端坐标系的 Z 轴 (0,0,1) 经过 RPY 旋转后的结果。
+        如果项目实际前向轴不同(例如 X 轴), 可在此处修改基向量。
+    """
+    rpy_end = np.asarray(rpy_end, dtype=float)
+    if rpy_end.shape != (3,):
+        raise ValueError("rpy_end 必须是长度为3的一维数组")
+    rot = R.from_euler('xyz', rpy_end)
+    forward = rot.apply(np.array([0.0, 0.0, 1.0]))  # 本地Z轴
+    vec = -forward
+    n = np.linalg.norm(vec)
+    return vec / n if n > 0 else vec
+
+def generate_curve(curve_type, start, end, rpy_end, beta, maxn = 2000):
+    # 计算反向单位向量 (目前未进一步使用, 如需可在此返回或附加到结果中)
+    direct = get_direct(end, rpy_end)
     if curve_type == 'bezier':
-        curve0 = generate_bezier_trajectory(start, end, num=maxn)
+        curve0 = generate_bezier_trajectory(start, end, direct, num=maxn)
         curve0_length = curve_length(curve0)
-        curve = generate_bezier_trajectory(start, end, num=int(curve0_length/beta))
+        curve = generate_bezier_trajectory(start, end, direct, num=int(curve0_length/beta))
     elif curve_type == 'cone':
-        curve0 = generate_cone_trajectory(start, end, num=maxn)
+        curve0 = generate_cone_trajectory(start, end, direct, num=maxn)
         curve0_length = curve_length(curve0)
-        curve = generate_cone_trajectory(start, end, num=int(curve0_length/beta))
+        curve = generate_cone_trajectory(start, end, direct, num=int(curve0_length/beta))
     else:
         raise ValueError(f"Unsupported curve type: {curve_type}")
     
@@ -175,12 +199,15 @@ def main():
             xyz_start = eef_position[6:9]
             xyz_end = endpoint[0:3]
 
-            # if xyz_start[1] > xyz_end[1]:
-            #     per_task_stats[t['name']]['skipped_episodes'] += 1
-            #     continue
+            rpy_start = eef_position[9:12]
+            rpy_end = endpoint[3:6]
+
+            if xyz_start[1] > xyz_end[1]:
+                per_task_stats[t['name']]['skipped_episodes'] += 1
+                continue
 
             # Generate the curve
-            curve = generate_curve(curve_type, xyz_start, xyz_end, beta)
+            curve = generate_curve(curve_type, xyz_start, xyz_end, rpy_end, beta)
             curve_length = len(curve)
             if curve_length == 0:
                 curve = np.vstack([curve, xyz_end[np.newaxis, :]])
@@ -206,8 +233,6 @@ def main():
                 curve_length = chunk_size
                 per_task_stats[t['name']]['episodes_with_truncated_curves'] += 1
 
-            rpy_start = eef_position[9:12]
-            rpy_end = endpoint[3:6]
             # Generate the RPY trajectory with the final curve_length
             rpy_state = generate_rpy_trajectory(rpy_start, rpy_end, curve_length)
 
