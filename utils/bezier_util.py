@@ -15,35 +15,38 @@ def bezier_curve(points, num):
         curve += binom * ((1 - t) ** (n - i))[:, None] * (t ** i)[:, None] * points[i]
     return curve
 
-def generate_bezier_trajectory(start, end, direct, num=200, vertical = False):
-    # 判断起点在安全平面左还是右
-    if vertical==False:
-        safe_plane_y = end[1]
-        if start[1] > safe_plane_y:
-            # 左侧，5点
-            P0 = np.array([start[0], safe_plane_y, start[2]])
-            P1 = np.array([start[0], safe_plane_y, end[2]])
-            P2 = np.array([end[0], safe_plane_y, end[2]])
-            control_points = [start, P0, P1, P2, end]
-        else:
-            # 右侧，4点
-            P0 = np.array([start[0], start[1], end[2]])
-            P1 = np.array([end[0], start[1], end[2]])
-            control_points = [start, P0, P1, end]
+def generate_bezier_trajectory(start, end, direct=None, num=2000):
+    """生成一条从 start 到 end 的贝塞尔轨迹。
+
+    新逻辑：给定 end 和方向向量 direct 构成一条射线 L: end + t * direct。
+    计算 start 到该直线的垂足(投影点) P，使用 [start, P, end] 三个控制点
+    构造二次贝塞尔曲线。
+
+    参数:
+        start (array-like): 起点 3D
+        end (array-like): 终点 3D
+        direct (array-like|None): 与 end 组成射线的方向向量；若为 None，默认使用 end-start
+        num (int): 采样点数量
+        vertical (bool): 为兼容旧接口保留（已无实际作用）
+    """
+    start = np.asarray(start, dtype=float)
+    end = np.asarray(end, dtype=float)
+    if direct is None:
+        direct = end - start
+    direct = np.asarray(direct, dtype=float)
+
+    norm = np.linalg.norm(direct)
+    if norm < 1e-9:
+        # 如果方向向量长度近似为0，则退化：取中点作为控制点
+        proj_point = (start + end) / 2.0
     else:
-        safe_plane_z = end[2]
-        if start[2] < safe_plane_z:
-            # 左侧，5点
-            P0 = np.array([start[0], start[1], safe_plane_z])
-            P1 = np.array([start[0], end[1], safe_plane_z])
-            P2 = np.array([end[0], end[1], safe_plane_z])
-            control_points = [start, P0, P1, P2, end]
-        else:
-            # 右侧，4点
-            P0 = np.array([start[0], end[1], start[2]])
-            P1 = np.array([end[0], end[1], start[2]])
-            control_points = [start, P0, P1, end]
-    # 生成贝塞尔曲线
+        u = direct / norm
+        # 向量从 end 指向 start
+        v = start - end
+        # 标量投影长度（可正可负，表示在射线方向上的位置）
+        t = np.dot(v, u)
+        proj_point = end + t * u
+
+    control_points = [start, proj_point, end]
     curve = bezier_curve(control_points, num)
-    # 采样m个最近点（只用输入采样点）
     return curve

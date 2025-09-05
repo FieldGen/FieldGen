@@ -202,9 +202,9 @@ def main():
             rpy_start = eef_position[9:12]
             rpy_end = endpoint[3:6]
 
-            if xyz_start[1] > xyz_end[1]:
-                per_task_stats[t['name']]['skipped_episodes'] += 1
-                continue
+            # if xyz_start[1] > xyz_end[1]:
+            #     per_task_stats[t['name']]['skipped_episodes'] += 1
+            #     continue
 
             # Generate the curve
             curve = generate_curve(curve_type, xyz_start, xyz_end, rpy_end, beta)
