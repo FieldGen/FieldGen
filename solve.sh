@@ -1,0 +1,2 @@
+python generate.py
+python create_tele_datasets.py   --source /mnt/public/yekehe/fieldgen_mainexp1/rotpick/processed.rotpick.fieldgen   --output /mnt/yekehe/fieldgen_mainexp1/rotpick   --seed 42 --mode symlink --force --prefix fieldgen
