@@ -21,71 +21,46 @@ def inside_cone(B, O, OA, theta):
     phi = np.arccos(np.clip(np.dot(OB, OA) / r, -1, 1))
     return phi <= np.radians(theta)
 
-# ---------- 直线沿 y 轴负方向到圆锥面 ----------
-def straight_to_cone(B, O, theta, n_rough=400):
+# ---------- 直线沿一般轴向 OA 到圆锥面 ----------
+def straight_to_cone(B, O, OA, theta, n_rough=400):
+    """从点 B 沿圆锥轴向 OA 方向 (单位向量) 前进，求与给定半顶角 theta 的圆锥面交点并生成插值点。
+
+    圆锥定义（顶点 O，轴向 OA，半顶角 theta）：
+        设任意点 P 的向量 OP = P - O
+        轴向坐标 a = dot(OP, OA)   (要求 a >= 0)
+        径向向量 r_vec = OP - a * OA,  r = ||r_vec||
+        圆锥面方程: r = tan(theta) * a
+
+    若从 B 沿 OA 方向作直线 B + t * OA (t>=0)，其径向分量保持不变，只需解方程得到 t。
     """
-    沿 y 轴负方向（OA=[0,-1,0]）直线与圆锥面相交
-    圆锥方程：sqrt(x²+z²) = -m·y  (y<0)
-    """
+    B = np.asarray(B, dtype=float)
+    O = np.asarray(O, dtype=float)
+    OA = normalize(OA)
+
     m = np.tan(np.radians(theta))
-    Bp = B - O                                   # 相对顶点
-    y0 = Bp[1]                                   # 当前 y
-    r_horiz = np.linalg.norm([Bp[0], Bp[2]])     # 径向距离
-    # t 满足  r_horiz = -m (y0 - t)  且 y0 - t < 0
-    t = y0 + r_horiz / m
-    hit = B + np.array([0, -t, 0])         # 沿 y 轴负方向
+    OB = B - O
+    a0 = np.dot(OB, OA)                # 轴向投影 (可为负，表示在顶点另一侧)
+    r_vec = OB - a0 * OA               # 径向分量
+    r0 = np.linalg.norm(r_vec)
 
-    # m = np.tan(np.radians(theta))
-    # Bp = B - O                      # 相对顶点
-    # z0 = Bp[2]                      # 当前 z
-    # r_horiz = np.linalg.norm([Bp[0], Bp[1]])  # 径向距离
+    # 已经在圆锥内或在面上：r0 <= m * a0 且 a0 >= 0
+    if a0 >= 0 and r0 <= m * a0 + 1e-12:
+        hit = B.copy()
+    else:
+        # 解 r0 = m * (a0 + t)  ->  t = r0/m - a0
+        # 若 t < 0 说明 B 朝 -OA 方向才会遇到锥面，此时直接设为 B（退化），避免数值问题
+        t = r0 / m - a0
+        if t < 0:
+            hit = B.copy()
+        else:
+            hit = B + t * OA
 
-    # # 直线方程： Bp + t·[0,0,1] 代入圆锥
-    # # r_horiz = m * (z0 + t)   且 z0 + t >= 0
-    # t = r_horiz / m - z0
-    # hit = B + np.array([0, 0, t])
-
-    # m = np.tan(np.radians(theta))
-
-    # # 1. 把问题降到平面 OAB 内的 2D 坐标系
-    # OA = np.array([0, -1, 0])          # 圆锥轴向下
-    # OB = B - O
-    # n_plane = np.cross(OB, OA)
-    # if np.allclose(n_plane, 0):        # B 在轴上，退化
-    #     return straight_to_cone(B, O, theta, n_rough)
-
-    # n_plane /= np.linalg.norm(n_plane)
-    # x_axis = np.cross(OA, n_plane)
-    # x_axis /= np.linalg.norm(x_axis)
-
-    # # 2D 坐标 (u,v)：x_axis→u, OA→v
-    # u0 = np.dot(OB, x_axis)
-    # v0 = np.dot(OB, OA)
-
-    # # 2. 圆锥在该平面内的交线：u = ± m v (v<0)
-    # # 内法线方向由 u^2 - m^2 v^2 = 0 的负梯度给出：
-    # #   (-u, m^2 v)  需与 (u-u0, v-v0) 平行
-    # # 解得：
-    # v_hit = (u0**2 + m**2 * v0**2) / (2 * m**2 * v0)
-    # u_hit = np.sign(u0) * m * v_hit      # 保持与 u0 同号
-
-    # # 3. 回到 3D
-    # hit = O + u_hit * x_axis + v_hit * OA
-    
-    # 在B和hit之间生成n_rough个非均匀分布的点
-    # 越靠近终点O（hit点），步幅越小
+    # 生成非均匀插值点（靠近 hit 更密集）
     u = np.linspace(0, 1, n_rough)
-    
-    # 使用指数函数创建非均匀分布，靠近终点(u=1)时步幅更小
-    power = 2.0  # power > 1 使得靠近终点时采样更密集
+    power = 2.0
     u_nonuniform = u ** power
-    
-    line_points = []
-    for u_val in u_nonuniform:
-        point = B + u_val * (hit - B)
-        line_points.append(point)
-    
-    return np.array(line_points)
+    line_points = B + u_nonuniform[:, None] * (hit - B)
+    return line_points
 
 # ---------- 圆锥内摆线 ----------
 def cone_inner_cycloid(B, O, A, n_rough=200):
@@ -161,26 +136,27 @@ def generate_cone_trajectory(start, end, direct, num, theta=60):
 
     # 原始曲线
     if inside_cone(start, O, OA, theta):
-        pts = cone_inner_cycloid(start, O, O + OA, n_rough=num) # 使用 O+OA 作为点 A
+        pts = cone_inner_cycloid(start, O, O + OA, n_rough=num)  # 使用 O+OA 作为点 A
         hit_pt = None
     else:
-        line_pts = straight_to_cone(start, O, theta, n_rough=2) # 先粗略求交点
-        cycl_pts = cone_inner_cycloid(line_pts[-1], O, O + OA, n_rough=400) # 使用 O+OA 作为点 A
-        pts = np.vstack([line_pts[:-1], cycl_pts])   # 组合为一条连续曲线
-        hit_pt = line_pts[-1]                        # hit 点
-        # 计算直线始末点之间的距离
+        # 先粗略求交点（两个点即可估算线段长度占比）
+        line_pts = straight_to_cone(start, O, OA, theta, n_rough=2)
+        cycl_pts = cone_inner_cycloid(line_pts[-1], O, O + OA, n_rough=400)
+        pts_tmp = np.vstack([line_pts[:-1], cycl_pts])
+        hit_pt = line_pts[-1]
+
+        # 估算比例以重新分配采样数量
         line_length = np.linalg.norm(line_pts[-1] - line_pts[0])
-        # 快速计算每个点与前一个点的距离之和
-        # 方法1：使用np.diff计算相邻点之间的差值，然后计算欧几里得距离
-        point_diffs = np.diff(cycl_pts, axis=0)  # 计算相邻点之间的差值向量
-        segment_lengths = np.linalg.norm(point_diffs, axis=1)  # 计算每个线段的长度
-        cycl_length = np.sum(segment_lengths)  # 计算总长度
+        point_diffs = np.diff(cycl_pts, axis=0)
+        segment_lengths = np.linalg.norm(point_diffs, axis=1)
+        cycl_length = np.sum(segment_lengths)
 
         line_num = max(int(num * line_length / (line_length + cycl_length)), 2)
         cycl_num = max(1, num - line_num + 1)
-        line_pts = straight_to_cone(start, O, theta, n_rough=line_num)
+
+        line_pts = straight_to_cone(start, O, OA, theta, n_rough=line_num)
         cycl_pts = cone_inner_cycloid(line_pts[-1], O, O + OA, n_rough=cycl_num)
-        pts = np.vstack([line_pts[:-1], cycl_pts])  
+        pts = np.vstack([line_pts[:-1], cycl_pts])
 
     return pts
 
@@ -188,7 +164,8 @@ def generate_cone_trajectory(start, end, direct, num, theta=60):
 if __name__ == "__main__":
     B = np.array([2, 3, 1])
     O = np.array([0, 0, 0])
-    traj, hit = generate_cone_trajectory(B, O, 200, theta=30)
+    axis_dir = np.array([0, -1, 0])  # 示例：轴向向下
+    traj, hit = generate_cone_trajectory(B, O, axis_dir, num=200, theta=30)
 
     fig = go.Figure()
 
