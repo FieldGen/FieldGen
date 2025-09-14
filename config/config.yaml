@@ -2,98 +2,117 @@
 # Specify the type of curve generation and input file paths
 generate:
   curve_type: cone # Options: bezier, cone
-  output_path: /mnt/yekehe/fieldgen_mainexp3/diversity_3
+  output_path: /mnt/yekehe/fieldgen_mainexp3/diversity_4/
   chunk_size: 35
   beta: 0.0025
 
 tasks:
   pick0:
-    path: /mnt/public/yekehe/fieldgen_mainexp3/separated/episode0
+    path: /mnt/public/yekehe/fieldgen_mainexp3/diversity_auto/episode0
     max_trajectories: null
-  # pick1:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/rotpick/separated/episode1
-  #   max_trajectories: null
+  pick1:
+    path: /mnt/public/yekehe/fieldgen_mainexp3/diversity_auto/episode1
+    max_trajectories: null
   # pick2:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/rotpick/separated/episode2
-  #   max_trajectories: null
+  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/separated/episode2
+  #   max_trajectories: 400
   # pick3:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/rotpick/separated/episode3
-  #   max_trajectories: null
+  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/separated/episode3
+  #   max_trajectories: 400
   # pick4:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/rotpick/separated/episode4
-  #   max_trajectories: null
+  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/separated/episode4
+  #   max_trajectories: 400
   # pick5:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/rotpick/separated/episode5
-  #   max_trajectories: null
+  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/separated/episode5
+  #   max_trajectories: 400
   # pick6:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/rotpick/separated/episode6
-  #   max_trajectories: null
+  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/separated/episode6
+  #   max_trajectories: 400
   # pick7:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/rotpick/separated/episode7
-  #   max_trajectories: null
+  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/separated/episode7
+  #   max_trajectories: 400
   # pick8:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/rotpick/separated/episode8
-  #   max_trajectories: null
+  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/separated/episode8
+  #   max_trajectories: 400
   # pick9:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/rotpick/separated/episode9
-  #   max_trajectories: null
+  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/separated/episode9
+  #   max_trajectories: 400
   # pick10:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/rotpick/separated/episode10
-  #   max_trajectories: null
+  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/separated/episode10
+  #   max_trajectories: 400
   # pick11:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/rotpick/separated/episode11
-  #   max_trajectories: null
+  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/separated/episode11
+  #   max_trajectories: 400
   # pick12:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/rotpick/separated/episode12
-  #   max_trajectories: null
+  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/separated/episode12
+  #   max_trajectories: 400
   # pick13:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/rotpick/separated/episode13
-  #   max_trajectories: null
+  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/separated/episode13
+  #   max_trajectories: 400
   # pick014:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/rotpick/separated/episode14
-  #   max_trajectories: null
+  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/separated/episode14
+  #   max_trajectories: 400
   # pick15:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/rotpick/separated/episode15
-  #   max_trajectories: null
+  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/separated/episode15
+  #   max_trajectories: 400
   # pick16:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/rotpick/separated/episode16
-  #   max_trajectories: null
+  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/separated/episode16
+  #   max_trajectories: 400
   # pick17:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/rotpick/separated/episode17
-  #   max_trajectories: null
+  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/separated/episode17
+  #   max_trajectories: 400
   # pick18:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/rotpick/separated/episode18
-  #   max_trajectories: null
+  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/separated/episode18
+  #   max_trajectories: 400
   # pick19:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/rotpick/separated/episode19
-  #   max_trajectories: null
+  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/separated/episode19
+  #   max_trajectories: 400
   # pick20:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/rotpick/separated/episode20
-  #   max_trajectories: null
+  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/separated/episode20
+    # max_trajectories: 400
   # pick21:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/rotpick/separated/episode21
-  #   max_trajectories: null
+  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/separated/episode21
+  #   max_trajectories: 400
   # pick22:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/rotpick/separated/episode22
-  #   max_trajectories: null
+  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/separated/episode22
+  #   max_trajectories: 400
   # pick23:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/rotpick/separated/episode23
-  #   max_trajectories: null
+  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/separated/episode23
+  #   max_trajectories: 400
   # pick24:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/rotpick/separated/episode24
-  #   max_trajectories: null
+  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/separated/episode24
+  #   max_trajectories: 400
   # pick25:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/rotpick/separated/episode25
-  #   max_trajectories: null
+  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/separated/episode25
+  #   max_trajectories: 400
   # pick26:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/rotpick/separated/episode26
-  #   max_trajectories: null
+  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/separated/episode26
+  #   max_trajectories: 400
   # pick27:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/rotpick/separated/episode27
-  #   max_trajectories: null
+  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/separated/episode27
+  #   max_trajectories: 400
   # pick28:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/rotpick/separated/episode28
-  #   max_trajectories: null
+  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/separated/episode28
+  #   max_trajectories: 400
   # pick29:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/rotpick/separated/episode29
-  #   max_trajectories: null
+  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/separated/episode29
+  #   max_trajectories: 400
+  # pick30:
+  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/separated/episode30
+  #   max_trajectories: 400
+  # pick31:
+  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/separated/episode31
+  #   max_trajectories: 400
+  # pick32:
+  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/separated/episode32
+  #   max_trajectories: 400
+  # pick33:
+  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/separated/episode33
+  #   max_trajectories: 400
+  # pick34:
+  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/separated/episode34
+  #   max_trajectories: 400
+  # pick35:
+  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/separated/episode35
+  #   max_trajectories: 400
+    

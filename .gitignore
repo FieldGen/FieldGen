@@ -32,3 +32,8 @@ npm-debug.log
 outputs/
 figs/
 html/
+pdf/
+*.csv
+.pytest_cache/
+plot_main*.py
+plot_abla*.py
