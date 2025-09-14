@@ -12,10 +12,11 @@
    覆盖判定（两种方法，可选）：
    - bin（默认）: 直接把点落入所在的 voxel 索引，标记占用。
    - nn : 为每个 voxel center 找最近点，若该点位于该 voxel 边界内则占用（更慢）。
-6. 生成 Plotly 3D 可视化：
-   - 绿色：被占用的 voxel 中心
-   - 半透明灰色：未占用的 voxel（可抽样显示，避免过多点导致浏览器卡顿）
+6. 生成 Plotly 3D 可视化（颜色可配置）：
+    - 占用体素：默认橙色 (#ff7f0e)
+    - 空体素：默认半透明灰 (rgba(120,120,120,0.15))（可抽样显示，避免过多点导致浏览器卡顿）
 7. 输出统计信息与 HTML。
+8. 新增“直接点”模式：使用 --direct-points 输出所有收集到的原始点（不做体素化），可通过 --direct-max-points 控制最大点数（随机下采样）。
 
 使用示例：
 python visualize_diversity.py --path /data/episode0 \
@@ -272,7 +273,7 @@ def occupancy_by_nn(points: np.ndarray, grid_info):  # pragma: no cover (性能�
     return occ
 
 
-def build_plot(occ, grid_info, sample_empty: int, output: str):
+def build_plot(occ, grid_info, sample_empty: int, output: str, occupied_color: str, empty_color: str):
     xs, ys, zs = grid_info['xs'], grid_info['ys'], grid_info['zs']
     nx, ny, nz = grid_info['counts']
     voxel_size = grid_info['voxel_size']
@@ -294,7 +295,7 @@ def build_plot(occ, grid_info, sample_empty: int, output: str):
                 z=occupied_centers[:, 2],
                 mode='markers',
                 name='占用体素',
-                marker=dict(size=3, color='green', opacity=0.9)
+                marker=dict(size=3, color=occupied_color, opacity=0.9)
             )
         )
     if sample_empty > 0 and len(empty_centers) > 0:
@@ -310,7 +311,7 @@ def build_plot(occ, grid_info, sample_empty: int, output: str):
                 z=empty_show[:, 2],
                 mode='markers',
                 name='空体素(采样)',
-                marker=dict(size=2, color='rgba(120,120,120,0.15)')
+                marker=dict(size=2, color=empty_color)
             )
         )
 
@@ -336,7 +337,7 @@ def build_plot(occ, grid_info, sample_empty: int, output: str):
 
 
 def parse_args():
-    p = argparse.ArgumentParser(description='点多样性体素覆盖可视化 (支持批量 episode)')
+    p = argparse.ArgumentParser(description='点多样性体素覆盖可视化 / 直接点查看 (支持批量 episode)')
     p.add_argument('--path', required=True, help='根目录 / episode 目录 / 单个 h5 文件')
     p.add_argument('--h5-name', default='aligned_joints.h5', help='遍历目录时寻找的文件名')
     p.add_argument('--dataset', default=None, help='数据集名称 (留空=自动检测)')
@@ -345,11 +346,80 @@ def parse_args():
     p.add_argument('--global-max-points', type=int, default=0, help='全局最大点数 (0=不限制)')
     p.add_argument('--beta', type=float, default=0.005, help='voxel_size = beta * max_range')
     p.add_argument('--method', choices=['bin', 'nn'], default='bin', help='占用计算方法')
-    p.add_argument('--max-total-voxels', type=int, default=300000, help='体素数量安全上限')
+    p.add_argument('--max-total-voxels', type=int, default=100000, help='体素数量安全上限')
     p.add_argument('--sample-empty', type=int, default=40000, help='可视化时空体素最大抽样数 (0=不显示)')
-    p.add_argument('--seed', type=int, default=0, help='随机种子')
+    p.add_argument('--seed', type=int, default=42, help='随机种子')
+    p.add_argument('--occupied-color', default='#ff7f0e', help='占用体素颜色 (默认橙色 #ff7f0e)')
+    p.add_argument('--empty-color', default='rgba(120,120,120,0.15)', help='空体素颜色 (默认半透明灰)')
     p.add_argument('--output', default='html/diversity_voxels.html', help='输出 HTML 文件路径')
+    # 新增：直接点输出模式
+    p.add_argument('--direct-points', action='store_true', help='启用直接点模式：跳过体素，输出所有点的3D散点')
+    p.add_argument('--direct-max-points', type=int, default=0, help='直接点模式下最大点数 (0=不限制，超过将随机下采样)')
+    p.add_argument('--direct-color', default='Viridis', help='直接点模式颜色映射 (Plotly colorscale 或单色)')
+    p.add_argument('--direct-size', type=float, default=2, help='直接点模式单点尺寸')
+    p.add_argument('--direct-output', default='html/diversity_points.html', help='直接点模式输出 HTML')
     return p.parse_args()
+
+
+def build_direct_points_plot(points: np.ndarray, output: str, colorscale: str, size: float, single_color: Optional[str] = None):
+    os.makedirs(os.path.dirname(output), exist_ok=True)
+
+    def _hex_to_rgb(h: str):
+        h = h.lstrip('#')
+        if len(h) == 3:
+            h = ''.join(c*2 for c in h)
+        return tuple(int(h[i:i+2], 16) for i in (0, 2, 4))
+
+    if single_color:
+        # 生成基于 single_color 的渐变 colorscale: 亮色 -> 原色
+        try:
+            r, g, b = _hex_to_rgb(single_color)
+            # 生成一个更亮的起始色（与白色混合）
+            mix_factor = 0.75  # 越大越接近白
+            r_l = int(r + (255 - r) * mix_factor)
+            g_l = int(g + (255 - g) * mix_factor)
+            b_l = int(b + (255 - b) * mix_factor)
+            custom_scale = [
+                [0.0, f'rgb({r_l},{g_l},{b_l})'],
+                [1.0, f'rgb({r},{g},{b})']
+            ]
+            marker = dict(
+                size=size,
+                color=points[:, 2],
+                colorscale=custom_scale,
+                opacity=0.8,
+                colorbar=dict(title='Z')
+            )
+            title_mode = f'基于 {single_color} 渐变'
+        except Exception:
+            # 回退为纯单色（解析失败）
+            marker = dict(size=size, color=single_color, opacity=0.8)
+            title_mode = f'单色 {single_color}'
+    else:
+        marker = dict(
+            size=size,
+            color=points[:, 2],
+            colorscale=colorscale if colorscale else 'Viridis',
+            opacity=0.8,
+            colorbar=dict(title='Z')
+        )
+        title_mode = f'colorscale={colorscale if colorscale else "Viridis"}'
+
+    fig = go.Figure(data=[
+        go.Scatter3d(
+            x=points[:, 0], y=points[:, 1], z=points[:, 2],
+            mode='markers',
+            marker=marker,
+            name=f'points ({len(points)})'
+        )
+    ])
+    fig.update_layout(
+        title=f'直接点可视化 (共 {len(points)} 个点) - {title_mode}',
+        scene=dict(xaxis_title='X', yaxis_title='Y', zaxis_title='Z'),
+        margin=dict(r=20, b=10, l=10, t=40)
+    )
+    fig.write_html(output)
+    return output
 
 
 def main():
@@ -373,6 +443,37 @@ def main():
     print(f"使用数据集: {dsname}")
     total_loaded = sum(s for _, s in stats)
     print(f"汇总得到 {len(points)} 个点(采样后)，原始累计 {total_loaded}。 Episode 分布示例: {stats[:10]}{' ...' if len(stats)>10 else ''}")
+
+    # 直接点模式
+    if args.direct_points:
+        if args.direct_max_points > 0 and len(points) > args.direct_max_points:
+            sel = np.random.choice(len(points), args.direct_max_points, replace=False)
+            points_vis = points[sel]
+            print(f"直接点模式：随机下采样 {len(points)} -> {len(points_vis)}")
+        else:
+            points_vis = points
+        # 使用 occupied-color 作为单色。如果用户仍想用 colorscale，可以传入 --direct-color 'auto'
+        use_single = True
+        single_color = args.occupied_color if use_single else None
+        # 如果用户显式指定 direct-color 且不是 'auto'，则按照 colorscale/单色判定：如果以#或rgb开头则覆盖 single_color
+        if args.direct_color and args.direct_color.lower() != 'auto':
+            if args.direct_color.lower().startswith(('#', 'rgb')):
+                single_color = args.direct_color  # 用户自定义单色
+            else:
+                single_color = None  # 使用提供的 colorscale
+                colorscale = args.direct_color
+        else:
+            colorscale = 'Viridis'  # 默认 colorscale 仅在 single_color 关闭时使用
+        out_file = build_direct_points_plot(points_vis, args.direct_output, colorscale=args.direct_color, size=args.direct_size, single_color=single_color)
+        print("\n================ 直接点模式完成 ================")
+        print(f"输出文件: {os.path.abspath(out_file)}")
+        print(f"显示点数: {len(points_vis)} (原始 {len(points)})")
+        if single_color:
+            print(f"渲染模式: 单色 {single_color}")
+        else:
+            print(f"渲染模式: colorscale {colorscale}")
+        print("==============================================\n")
+        return
     print("计算包围盒与体素网格……")
 
     grid_info = compute_voxel_grid(points, beta=args.beta, max_total_voxels=args.max_total_voxels)
@@ -387,7 +488,14 @@ def main():
         occ = occupancy_by_nn(points, grid_info)
 
     # 构建并保存可视化
-    output, occ_count, total_voxels, occ_ratio = build_plot(occ, grid_info, args.sample_empty, args.output)
+    output, occ_count, total_voxels, occ_ratio = build_plot(
+        occ,
+        grid_info,
+        args.sample_empty,
+        args.output,
+        args.occupied_color,
+        args.empty_color,
+    )
 
     print("\n================ 统计信息 ================")
     print(f"总体素数: {total_voxels}")
