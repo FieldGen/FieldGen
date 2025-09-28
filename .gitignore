@@ -37,3 +37,6 @@ pdf/
 .pytest_cache/
 plot_main*.py
 plot_abla*.py
+visualize*
+*.mp4
+videos/
