@@ -40,3 +40,4 @@ plot_abla*.py
 visualize*
 *.mp4
 videos/
+*.png
