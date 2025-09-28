@@ -35,9 +35,9 @@ html/
 pdf/
 *.csv
 .pytest_cache/
-plot_main*.py
-plot_abla*.py
+plot_*.py
 visualize*
 *.mp4
 videos/
 *.png
+*.sh
