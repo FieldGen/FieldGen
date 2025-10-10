@@ -38,7 +38,6 @@ def get_direct(end, rpy_end):
     return vec / n if n > 0 else vec
 
 def generate_curve(curve_type, start, end, rpy_end, beta, maxn = 2000):
-    # 计算反向单位向量 (目前未进一步使用, 如需可在此返回或附加到结果中)
     direct = get_direct(end, rpy_end)
     if curve_type == 'bezier':
         curve0 = generate_bezier_trajectory(start, end, direct, num=maxn)

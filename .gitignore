@@ -41,3 +41,6 @@ visualize*
 videos/
 *.png
 *.sh
+*.hdf5
+*.h5
+outputs/
