@@ -117,6 +117,15 @@ def main():
     output_path = gen_cfg.get('output_path', 'output/')
     beta = gen_cfg.get('beta', 0.003)
     endpoint_random_radius = gen_cfg.get('endpoint_random_radius', 0.3)
+    # 新增: 生成倍数 (默认3倍) 与 reward 目标范围配置
+    multiplier = gen_cfg.get('multiplier', 3)
+    reward_target_min = gen_cfg.get('reward_target_min', 0.9)
+    reward_target_max = gen_cfg.get('reward_target_max', 1.0)
+    # 旧逻辑中的尝试次数设置不再使用，保留读取避免报错
+    _deprecated_reward_max_attempts = gen_cfg.get('reward_max_attempts', 20)
+    # 等分半径策略: reward = 1 - d/R (方向保持一致 cos≈1)
+    # 为保证最小 reward >= reward_target_min, 令最大半径比 max_radius_ratio = 1 - reward_target_min
+    max_radius_ratio = max(0.0, min(1.0, 1.0 - reward_target_min))
 
     # Tasks configuration: multiple input folders with per-task max_trajectories
     tasks_cfg = config.get('tasks', {})
@@ -186,126 +195,98 @@ def main():
 
         # Determine number to process for this task
         if max_trajectories is not None and max_trajectories > 0:
-            items_to_process = min(max_trajectories, len(eef_positions))
-            print(f"  限制处理轨迹数量: {items_to_process} (任务配额)")
+            base_items = min(max_trajectories, len(eef_positions))
+            print(f"  限制处理轨迹数量(基础): {base_items} (任务配额)")
         else:
-            items_to_process = len(eef_positions)
-            print(f"  处理所有轨迹: {items_to_process}")
+            base_items = len(eef_positions)
+            print(f"  处理所有轨迹(基础): {base_items}")
+
+        # 应用生成倍数 multiplier
+        items_to_process = base_items * multiplier
+        print(f"  应用倍数 multiplier={multiplier} -> 计划生成 {items_to_process} episodes")
 
         per_task_stats[t['name']]['items_to_process'] = items_to_process
 
-        # Use a while loop to ensure exactly items_to_process valid episodes are generated
-        sampled_indices = np.random.permutation(len(eef_positions))
-        valid_count = 0
-        idx_ptr = 0
+        # 等分半径采样: 先选择 base_items 个基础 index, 每个生成 multiplier 条轨迹
+        base_indices = np.random.permutation(len(eef_positions))[:base_items]
         pbar = tqdm(total=items_to_process, desc=f"Processing {t['name']}")
-        while valid_count < items_to_process and idx_ptr < len(sampled_indices):
-            eef_id = sampled_indices[idx_ptr]
-            idx_ptr += 1
+        for eef_id in base_indices:
             eef_position = eef_positions[eef_id]
             xyz_start = eef_position[6:9]
             original_endpoint_pos = endpoint[0:3]
-
             rpy_start = eef_position[9:12]
             rpy_end = endpoint[3:6]
-
-            # 生成随机终点: 在 original_endpoint_pos 周围球内随机采样，半径 endpoint_random_radius
-            # 使用均匀球采样: 方向随机, 半径按 r=R* cbrt(u)
-            u = np.random.rand()
+            # 使用随机方向的单位向量作为偏移方向 (取代固定指向原endpoint的方向)
             R_radius = endpoint_random_radius
-            rand_dir = np.random.normal(size=3)
-            rand_dir /= (np.linalg.norm(rand_dir) + 1e-9)
-            rand_r = R_radius * (u)
-            random_endpoint_pos = original_endpoint_pos + rand_dir * rand_r
-
-            xyz_end = random_endpoint_pos
-
-            # if xyz_start[1] > xyz_end[1]:
-            #     per_task_stats[t['name']]['skipped_episodes'] += 1
-            #     continue
-
-            # Generate the curve
-            curve = generate_curve(curve_type, xyz_start, xyz_end, rpy_end, beta)
-            curve_length = len(curve)
-            if curve_length == 0:
-                curve = np.vstack([curve, xyz_end[np.newaxis, :]])
-                curve_length = 1
-            # Update per-task curve statistics
-            per_task_stats[t['name']]['curve_lengths'].append(curve_length)
-
-            if curve_length < len_min:
-                len_min = curve_length
-                episode_id = eef_id
-
-            gripper = np.tile([0.0, 0.0], (curve_length, 1))
-            if curve_length < chunk_size:
-                per_task_stats[t['name']]['episodes_with_extended_curves'] += 1
-                gripper[-1] = [0.0, 90.0]
-                while len(curve) < chunk_size:
-                    curve = np.vstack([curve, curve[-1]])
-                    gripper = np.vstack([gripper, gripper[-1]])
-                curve_length = len(curve)
-            elif curve_length > chunk_size:
-                curve = curve[:chunk_size]
-                gripper = gripper[:chunk_size]
-                curve_length = chunk_size
-                per_task_stats[t['name']]['episodes_with_truncated_curves'] += 1
-
-            # Generate the RPY trajectory with the final curve_length
-            rpy_state = generate_rpy_trajectory(rpy_start, rpy_end, curve_length)
-
-            left_curve = np.tile(eef_position[0:3], (curve_length, 1))
-            left_rpy = np.tile(eef_position[3:6], (curve_length, 1))
-
-            combined_data = np.hstack((left_curve, left_rpy, curve, rpy_state))
-
-            # 计算单一奖励：基于起点->原终点 与 起点->随机终点 的夹角
-            # reward = (1 - dist(original_endpoint, random_endpoint)/R) * cos(theta)
-            dist_random = np.linalg.norm(original_endpoint_pos - random_endpoint_pos)
-            vec_to_original = original_endpoint_pos - xyz_start  # (3,)
-            vec_to_random = random_endpoint_pos - xyz_start      # (3,)
-            dot_ab = float(np.dot(vec_to_original, vec_to_random))
-            norm_a = np.linalg.norm(vec_to_original)
-            norm_b = np.linalg.norm(vec_to_random)
-            cos_theta = dot_ab / (norm_a * norm_b + 1e-9)
-            if R_radius < 1e-6:
-                reward_value = 1.0
+            # radii: 包含0, 最后一个为 max_radius_ratio * R_radius
+            if multiplier > 1:
+                radii = np.linspace(0.0, max_radius_ratio * R_radius, multiplier)
             else:
-                reward_value = (1.0 - dist_random / R_radius) * cos_theta
-            # 收集奖励统计（标量）
-            per_task_stats[t['name']]['reward_means'].append(reward_value)
-            per_task_stats[t['name']]['reward_mins'].append(reward_value)
-            per_task_stats[t['name']]['reward_maxs'].append(reward_value)
-            stats['reward_all'].append(reward_value)
-            # 每个 episode 打印一次奖励分布简要（可根据需要节流）
-            # print(f"    Episode {episode_cnt} reward stats: mean={r_mean:.4f} std={r_std:.4f} min={r_min:.4f} max={r_max:.4f}")
-
-            img_path = os.path.join(root_path, 'camera', str(eef_id))
-            if not os.path.exists(img_path):
-                per_task_stats[t['name']]['missing_image_paths'] += 1
-                per_task_stats[t['name']]['skipped_episodes'] += 1
-                stats['total_missing_image_paths'] += 1
-                print(f"Warning: Image path {img_path} does not exist. Skipping eef_id {eef_id}.")
-                continue
-
-            # Load images from the specified path and create a dictionary with image names as keys
-            img_files = [img for img in os.listdir(img_path) if img.endswith('.jpg')]
-            stats['total_images_processed'] += len(img_files)
-            per_task_stats[t['name']]['total_images_processed'] += len(img_files)
-            imgs = {}
-            for img_file in img_files:
-                # Extract image name without extension as key
-                img_name = os.path.splitext(img_file)[0]
-                img_full_path = os.path.join(img_path, img_file)
-                imgs[img_name] = Image.open(img_full_path)
-
-            # Generate the episode
-            generate_episode(output_path, episode_cnt, combined_data, gripper, imgs, reward_value)
-            episode_cnt += 1
-            per_task_stats[t['name']]['successful_episodes'] += 1
-            stats['total_successful_episodes'] += 1
-            valid_count += 1
-            pbar.update(1)
+                radii = np.array([0.0])
+            for radius in radii:
+                rand_dir = np.random.normal(size=3)
+                base_dir = rand_dir / (np.linalg.norm(rand_dir) + 1e-9)
+                random_endpoint_pos = original_endpoint_pos - base_dir * radius
+                # 计算 reward: (1 - d/R)
+                dist_random = np.linalg.norm(original_endpoint_pos - random_endpoint_pos)
+                if dist_random < 1e-9 or R_radius < 1e-7:
+                    reward_value = 1.0
+                else:
+                    base_term = 1.0 - (dist_random / (R_radius + 1e-12))
+                    reward_value = base_term
+                # Clamp 到配置区间
+                reward_value = min(max(reward_value, reward_target_min), reward_target_max)
+                xyz_end = random_endpoint_pos
+                curve = generate_curve(curve_type, xyz_start, xyz_end, rpy_end, beta)
+                curve_length = len(curve)
+                if curve_length == 0:
+                    curve = np.vstack([curve, xyz_end[np.newaxis, :]])
+                    curve_length = 1
+                per_task_stats[t['name']]['curve_lengths'].append(curve_length)
+                if curve_length < len_min:
+                    len_min = curve_length
+                    episode_id = eef_id
+                gripper = np.tile([0.0, 0.0], (curve_length, 1))
+                if curve_length < chunk_size:
+                    per_task_stats[t['name']]['episodes_with_extended_curves'] += 1
+                    gripper[-1] = [0.0, 90.0]
+                    while len(curve) < chunk_size:
+                        curve = np.vstack([curve, curve[-1]])
+                        gripper = np.vstack([gripper, gripper[-1]])
+                    curve_length = len(curve)
+                elif curve_length > chunk_size:
+                    curve = curve[:chunk_size]
+                    gripper = gripper[:chunk_size]
+                    curve_length = chunk_size
+                    per_task_stats[t['name']]['episodes_with_truncated_curves'] += 1
+                rpy_state = generate_rpy_trajectory(rpy_start, rpy_end, curve_length)
+                left_curve = np.tile(eef_position[0:3], (curve_length, 1))
+                left_rpy = np.tile(eef_position[3:6], (curve_length, 1))
+                combined_data = np.hstack((left_curve, left_rpy, curve, rpy_state))
+                per_task_stats[t['name']]['reward_means'].append(reward_value)
+                per_task_stats[t['name']]['reward_mins'].append(reward_value)
+                per_task_stats[t['name']]['reward_maxs'].append(reward_value)
+                stats['reward_all'].append(reward_value)
+                img_path = os.path.join(root_path, 'camera', str(eef_id))
+                if not os.path.exists(img_path):
+                    per_task_stats[t['name']]['missing_image_paths'] += 1
+                    per_task_stats[t['name']]['skipped_episodes'] += 1
+                    stats['total_missing_image_paths'] += 1
+                    print(f"Warning: Image path {img_path} does not exist. Skipping eef_id {eef_id}.")
+                    continue
+                img_files = [img for img in os.listdir(img_path) if img.endswith('.jpg')]
+                stats['total_images_processed'] += len(img_files)
+                per_task_stats[t['name']]['total_images_processed'] += len(img_files)
+                imgs = {}
+                for img_file in img_files:
+                    img_name = os.path.splitext(img_file)[0]
+                    img_full_path = os.path.join(img_path, img_file)
+                    imgs[img_name] = Image.open(img_full_path)
+                generate_episode(output_path, episode_cnt, combined_data, gripper, imgs, reward_value)
+                episode_cnt += 1
+                per_task_stats[t['name']]['successful_episodes'] += 1
+                stats['total_successful_episodes'] += 1
+                pbar.update(1)
         pbar.close()
     
     # Calculate processing time
@@ -319,6 +300,8 @@ def main():
     print(f"处理时间: {processing_time:.2f} 秒")
     print(f"使用的曲线类型: {stats['curve_type_used']}")
     print(f"截断大小: {stats['chunk_size_used']}")
+    print(f"生成倍数(multiplier): {multiplier}")
+    print(f"Reward 目标区间: [{reward_target_min}, {reward_target_max}]  (等分半径策略, 每基础轨迹首个必为1.0)")
     print()
 
     print("全局统计:")
