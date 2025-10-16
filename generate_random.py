@@ -268,7 +268,10 @@ def main():
             norm_a = np.linalg.norm(vec_to_original)
             norm_b = np.linalg.norm(vec_to_random)
             cos_theta = dot_ab / (norm_a * norm_b + 1e-9)
-            reward_value = (1.0 - dist_random / R_radius) * cos_theta
+            if R_radius < 1e-6:
+                reward_value = 1.0
+            else:
+                reward_value = (1.0 - dist_random / R_radius) * cos_theta
             # 收集奖励统计（标量）
             per_task_stats[t['name']]['reward_means'].append(reward_value)
             per_task_stats[t['name']]['reward_mins'].append(reward_value)
