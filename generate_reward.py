@@ -6,6 +6,7 @@ from PIL import Image
 from tqdm import tqdm
 from mpl_toolkits.mplot3d import Axes3D
 import time
+import argparse
 
 from utils.visualize_points import visualize_curve_with_rpy
 from utils.bezier_util import generate_bezier_trajectory
@@ -89,9 +90,16 @@ def generate_episode(output_dir, episode_id, combined_data, gripper, imgs, rewar
 
     # print(f"Episode {episode_id} generated: {episode_path}")
 
+def parse_args():
+    parser = argparse.ArgumentParser(description="Generate reward trajectories and aligned datasets")
+    parser.add_argument("--config", type=str, default=os.path.join('config', 'config.yaml'), help="Path to YAML configuration file (default: config/config.yaml)")
+    return parser.parse_args()
+
+
 def main():
     # Record start time
     start_time = time.time()
+    args = parse_args()
     
     # Initialize simplified global statistics and per-task stats container
     stats = {
@@ -107,7 +115,9 @@ def main():
     per_task_stats = {}
     
     # Load configuration
-    config_path = os.path.join('config', 'config.yaml')
+    config_path = args.config
+    if not os.path.isfile(config_path):
+        raise FileNotFoundError(f"配置文件未找到: {config_path}")
     with open(config_path, 'r') as file:
         config = yaml.safe_load(file)
 
