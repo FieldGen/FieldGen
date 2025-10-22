@@ -2,7 +2,7 @@
 # Specify the type of curve generation and input file paths
 generate:
   curve_type: cone # Options: bezier, cone
-  output_path: /mnt/yekehe/fieldgen_mainexp1/pick/random_reward_10X
+  output_path: /path/to/output
   chunk_size: 35
   beta: 0.0025
   endpoint_random_radius: 0.1
@@ -12,111 +12,9 @@ generate:
 
 tasks:
   pick0:
-    path: /mnt/public/yekehe/fieldgen_mainexp1/pick/reward_1_5/episode0
+    path: /path/to/episode/episode0
     max_trajectories: null
   pick1:
-    path: /mnt/public/yekehe/fieldgen_mainexp1/pick/reward_1_5/episode1
+    path: /path/to/episode/episode1
     max_trajectories: null
-  pick2:
-    path: /mnt/public/yekehe/fieldgen_mainexp1/pick/reward_1_5/episode2
-    max_trajectories: null
-  pick3:
-    path: /mnt/public/yekehe/fieldgen_mainexp1/pick/reward_1_5/episode3
-    max_trajectories: null
-  pick4:
-    path: /mnt/public/yekehe/fieldgen_mainexp1/pick/reward_1_5/episode4
-    max_trajectories: null
-  pick5:
-    path: /mnt/public/yekehe/fieldgen_mainexp1/pick/reward_1_5/episode5
-    max_trajectories: null
-  pick6:
-    path: /mnt/public/yekehe/fieldgen_mainexp1/pick/reward_1_5/episode6
-    max_trajectories: null
-  pick7:
-    path: /mnt/public/yekehe/fieldgen_mainexp1/pick/reward_1_5/episode7
-    max_trajectories: null
-  pick8:
-    path: /mnt/public/yekehe/fieldgen_mainexp1/pick/reward_1_5/episode8
-    max_trajectories: null
-  pick9:
-    path: /mnt/public/yekehe/fieldgen_mainexp1/pick/reward_1_5/episode9
-    max_trajectories: null
-  pick10:
-    path: /mnt/public/yekehe/fieldgen_mainexp1/pick/reward_1_5/episode10
-    max_trajectories: null
-  pick11:
-    path: /mnt/public/yekehe/fieldgen_mainexp1/pick/reward_1_5/episode11
-    max_trajectories: null
-  pick12:
-    path: /mnt/public/yekehe/fieldgen_mainexp1/pick/reward_1_5/episode12
-    max_trajectories: null
-  # pick13:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/reward_1_5/episode13
-  #   max_trajectories: null
-  # pick014:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/reward_1_5/episode14
-  #   max_trajectories: null
-  # pick15:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/reward_1_5/episode15
-  #   max_trajectories: null
-  # pick16:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/reward_1_5/episode16
-  #   max_trajectories: null
-  # pick17:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/reward_1_5/episode17
-  #   max_trajectories: null
-  # pick18:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/reward_1_5/episode18
-  #   max_trajectories: null
-  # pick19:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/reward_1_5/episode19
-  #   max_trajectories: null
-  # pick20:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/reward_1_5/episode20
-  #   max_trajectories: null
-  # pick21:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/reward_1_5/episode21
-  #   max_trajectories: null
-  # pick22:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/reward_1_5/episode22
-  #   max_trajectories: null
-  # pick23:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/reward_1_5/episode23
-  #   max_trajectories: null
-  # pick24:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/reward_1_5/episode24
-  #   max_trajectories: null
-  # pick25:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/reward_1_5/episode25
-  #   max_trajectories: null
-  # pick26:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/reward_1_5/episode26
-  #   max_trajectories: null
-  # pick27:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/reward_1_5/episode27
-  #   max_trajectories: null
-  # pick28:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/reward_1_5/episode28
-  #   max_trajectories: null
-  # pick29:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/reward_1_5/episode29
-  #   max_trajectories: null
-  # pick30:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/reward_1_5/episode30
-  #   max_trajectories: null
-  # pick31:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/reward_1_5/episode31
-  #   max_trajectories: null
-  # pick32:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/reward_1_5/episode32
-  #   max_trajectories: null
-  # pick33:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/reward_1_5/episode33
-  #   max_trajectories: null
-  # pick34:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/reward_1_5/episode34
-  #   max_trajectories: null
-  # pick35:
-  #   path: /mnt/public/yekehe/fieldgen_mainexp1/pick/reward_1_5/episode35
-  #   max_trajectories: null
     
