@@ -1,22 +1,22 @@
 #!/usr/bin/env python3
 """
-打印 HDF5 文件内部层级结构 (仿 tree)。
+Print an HDF5 file's internal hierarchy (tree-like view).
 
-用法:
-  python scripts/h5_tree.py path/to/file.h5
+Usage:
+    python scripts/h5_tree.py path/to/file.h5
 
-可选参数:
-  -m, --max-depth N     限制最大递归深度 (默认: 不限制)
-  -i, --show-attr       显示对象(组/数据集)的属性名
-  -s, --sort            先按组后按数据集排序 (默认: 读取顺序)
-  --no-color            关闭颜色输出
+Optional arguments:
+    -m, --max-depth N     Limit max recursion depth (default: unlimited)
+    -i, --show-attr       Show attribute names for groups/datasets
+    -s, --sort            Sort: groups first, then datasets (default: raw order)
+    --no-color            Disable ANSI color output
 
-输出说明:
-  [G] 代表 Group
-  [D] 代表 Dataset (不打印数据内容)
+Legend:
+    [G] Group
+    [D] Dataset (data contents are not printed)
 
-示例:
-  python scripts/h5_tree.py data/sample.h5 -m 3 -i -s
+Example:
+    python scripts/h5_tree.py data/sample.h5 -m 3 -i -s
 """
 from __future__ import annotations
 import argparse
@@ -25,7 +25,7 @@ import sys
 import h5py
 from typing import Optional, List
 
-# 简单的 ANSI 颜色支持
+# Simple ANSI color support
 class Color:
     BLUE = '\033[34m'
     GREEN = '\033[32m'
@@ -49,7 +49,7 @@ def list_children(obj: h5py.Group, sort: bool) -> List[str]:
     names = list(obj.keys())
     if not sort:
         return names
-    # 先 group 后 dataset，再按名称
+    # Sort: groups first, then datasets, then others, each name ascending
     groups = [n for n in names if isinstance(obj.get(n, getclass=True), h5py.Group)]
     datasets = [n for n in names if isinstance(obj.get(n, getclass=True), h5py.Dataset)]
     others = [n for n in names if n not in groups and n not in datasets]
@@ -88,27 +88,27 @@ def walk(name: str, obj, prefix: str, is_last: bool, args, level: int, color: bo
 
 
 def main(argv: Optional[List[str]] = None):
-    parser = argparse.ArgumentParser(description='以 tree 形式打印 HDF5 结构 (不输出数据内容)')
-    parser.add_argument('h5file', help='HDF5 文件路径 (.h5/.hdf5)')
-    parser.add_argument('-m', '--max-depth', type=int, default=None, help='最大递归深度 (根为 0)')
-    parser.add_argument('-i', '--show-attr', action='store_true', help='显示对象属性名')
-    parser.add_argument('-s', '--sort', action='store_true', help='按组/数据集分类并排序')
-    parser.add_argument('--no-color', action='store_true', help='关闭彩色输出')
+    parser = argparse.ArgumentParser(description='Print HDF5 structure in a tree format (no data contents)')
+    parser.add_argument('h5file', help='Path to HDF5 file (.h5/.hdf5)')
+    parser.add_argument('-m', '--max-depth', type=int, default=None, help='Maximum recursion depth (root=0)')
+    parser.add_argument('-i', '--show-attr', action='store_true', help='Show attribute names')
+    parser.add_argument('-s', '--sort', action='store_true', help='Sort groups/datasets')
+    parser.add_argument('--no-color', action='store_true', help='Disable colored output')
     args = parser.parse_args(argv)
 
     if not os.path.isfile(args.h5file):
-        print(f"错误: 找不到文件 {args.h5file}", file=sys.stderr)
+        print(f"Error: file not found {args.h5file}", file=sys.stderr)
         return 1
 
     color = not args.no_color and sys.stdout.isatty()
 
     try:
         with h5py.File(args.h5file, 'r') as f:
-            # 根节点
+            # Root node
             root_name = ''
             walk(root_name, f, prefix='', is_last=True, args=args, level=0, color=color)
     except OSError as e:
-        print(f"打开文件失败: {e}", file=sys.stderr)
+        print(f"Failed to open file: {e}", file=sys.stderr)
         return 2
     return 0
 

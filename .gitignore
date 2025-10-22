@@ -45,3 +45,4 @@ videos/
 *.h5
 outputs/
 reward*.yaml
+/tests

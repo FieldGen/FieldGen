@@ -122,6 +122,17 @@ Reward augmentation mode (random endpoints + reward writing):
 python generate.py --config config/config.yaml --reward
 ```
 
+## Data Collection
+
+FieldGen supports two complementary data acquisition modes for building large, diverse approach (pre‑manipulation) datasets:
+
+1. Automated Workspace Filling: Use the helper script (see `document/data_collect_notice.md`) to auto‑calibrate a reachable workspace from a few existing episodes, then generate a dense set of coverage points via 3D Z‑order (Morton) or Hilbert space‑filling curves. Each point optionally receives a synthesized sinusoidal RPY perturbation sequence to enrich orientation diversity.
+2. Teleoperation Traces: Manually drive the robot to collect longer (≈1–2 min) free‑space approach trajectories while lightly rotating the wrist/gripper and keeping the target object centered in view. This yields high‑quality, contact‑proximal behavior diversity where automated methods may underperform.
+
+Full details are documented here:
+▶ [Data Collection Guide](document/data_collect_notice.md)
+
+
 ## Reward Mechanism
 In reward mode:
 1. Read original endpoint `original_endpoint_pos`
