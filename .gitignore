@@ -44,3 +44,4 @@ videos/
 *.hdf5
 *.h5
 outputs/
+reward*.yaml
