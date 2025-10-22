@@ -1,8 +1,9 @@
-numpy>=1.21.0,<1.27.0
-matplotlib>=3.4.0,<3.8.0
-pyyaml
-plotly>=5.0.0
-h5py>=3.0.0
-Pillow>=8.0.0
-tqdm>=4.0.0
-scipy>=1.7.0
+numpy>=1.21,<2
+scipy>=1.7
+pyyaml>=6.0
+h5py>=3.0
+Pillow>=8.0
+tqdm>=4.0
+matplotlib>=3.4  # 测试与基础可视化
+# 可选交互可视化：安装 plotly
+# plotly>=5.0
