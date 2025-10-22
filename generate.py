@@ -18,7 +18,7 @@ def curve_length(curve):
 def get_direct(rpy_end):
     rpy_end = np.asarray(rpy_end, dtype=float)
     if rpy_end.shape != (3,):
-        raise ValueError("rpy_end 必须是长度为3的一维数组")
+        raise ValueError("rpy_end must be a 3-element array-like")
     rot = R.from_euler('xyz', rpy_end)
     forward = rot.apply(np.array([0.0, 0.0, 1.0]))  # 本地Z轴
     vec = -forward
@@ -81,10 +81,54 @@ def parse_args():
     parser.add_argument("--reward", action="store_true", help="Enable stochastic endpoint sampling (reward mode)")
     return parser.parse_args()
 
+def _print_config_summary(args, gen_cfg, tasks):
+    """Print a concise pre-generation configuration summary.
+
+    Shows: basic generation parameters, reward mode status, output path,
+    task counts, per-task quota, and simple existence checks.
+    """
+    curve_type = gen_cfg.get('curve_type', 'bezier')
+    chunk_size = gen_cfg.get('chunk_size', 32)
+    beta = gen_cfg.get('beta', 0.003)
+    endpoint_random_radius = gen_cfg.get('endpoint_random_radius', 0.3)
+    multiplier = gen_cfg.get('multiplier', 3)
+    reward_target_min = gen_cfg.get('reward_target_min', 0.9)
+    reward_target_max = gen_cfg.get('reward_target_max', 1.0)
+    output_path = gen_cfg.get('output_path', 'output/')
+
+    print("\n" + "="*60)
+    print(" FieldGen Configuration Summary")
+    print("="*60)
+    print(f"Config path: {args.config}")
+    print(f"Curve type        : {curve_type}")
+    print(f"Chunk size        : {chunk_size}")
+    print(f"Beta (density)    : {beta}")
+    if args.reward:
+        print("Reward mode       : ENABLED")
+        print(f"  multiplier      : {multiplier}")
+        print(f"  endpoint radius : {endpoint_random_radius}")
+        print(f"  reward range    : [{reward_target_min}, {reward_target_max}]")
+    else:
+        print("Reward mode       : disabled")
+    print(f"Output path       : {output_path}")
+    print(f"Tasks loaded      : {len(tasks)}")
+    print("-"*60)
+    # Per-task brief
+    for t in tasks[:20]:  # limit to first 20 to avoid log spam
+        tpath = t['path']
+        exists = os.path.exists(tpath)
+        quota = t['max_trajectories'] if t['max_trajectories'] is not None else 'all'
+        status = 'OK' if exists else 'MISSING'
+        print(f"{t['name']:<12} quota={quota:<5} path_exists={status}")
+    if len(tasks) > 20:
+        print(f"... ({len(tasks)-20} more tasks not shown) ...")
+    print("="*60)
+    print("Starting generation...\n")
+
 def main():
     start_time = time.time()
     args = parse_args()
-    
+
     # Initialize simplified global statistics and per-task stats container
     stats = {
         'total_eef_positions': 0,
@@ -96,7 +140,7 @@ def main():
     }
 
     per_task_stats = {}
-    
+
     # Load configuration
     config_path = args.config
     if not os.path.isfile(config_path):
@@ -136,6 +180,9 @@ def main():
 
     if not tasks:
         raise ValueError('No valid tasks found in config/tasks')
+
+    # Print pre-generation summary
+    _print_config_summary(args, gen_cfg, tasks)
 
     # Update stats with configuration
     stats['curve_type_used'] = curve_type
