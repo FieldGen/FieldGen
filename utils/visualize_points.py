@@ -11,21 +11,21 @@ def visualize_curve_with_rpy(combined_data, episode_path):
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
 
-    curve = combined_data[:, 6:9]  # Extract the curve points
-    rpy_state = combined_data[:, 9:12]  # Extract the RPY
+    curve = combined_data[:, 6:9]  # Curve points
+    rpy_state = combined_data[:, 9:12]  # RPY orientation
 
-    # Plot the curve
+    # Plot polyline
     ax.plot(curve[:, 0], curve[:, 1], curve[:, 2], label='Curve', color='blue')
 
-    # Add start and end points
+    # Start/end markers
     ax.scatter(curve[0, 0], curve[0, 1], curve[0, 2], color='green', label='Start', s=50)
     ax.scatter(curve[-1, 0], curve[-1, 1], curve[-1, 2], color='orange', label='End', s=50)
 
-    # Determine dynamic length based on y-axis scale
+    # Dynamic arrow length scale
     y_range = ax.get_ylim()
     dynamic_length = (y_range[1] - y_range[0]) * 0.2  # 1% of y-axis range
 
-    # Visualize rpy as rotation directions
+    # Orientation arrows
     for i in range(len(curve)):
         rotation = R.from_euler('xyz', rpy_state[i])
         direction = rotation.apply([0, 0, 1])  # Use y-axis as reference direction
@@ -40,22 +40,13 @@ def visualize_curve_with_rpy(combined_data, episode_path):
     ax.set_zlabel('Z')
     ax.legend()
 
-    # Save the plot
+    # Save figure
     plot_path = os.path.join(episode_path, 'curve_visualization.png')
     plt.savefig(plot_path)
     plt.close()
 
 def create_3d_scatter_plot(points_xyz, endpoint_xyz):
-    """
-    Creates an interactive 3D scatter plot for the given points and endpoint.
-    
-    Args:
-        points_xyz (np.array): Array of XYZ coordinates for the main points.
-        endpoint_xyz (np.array): Array with the XYZ coordinates for the endpoint.
-        
-    Returns:
-        go.Figure: A Plotly figure object for the 3D scatter plot.
-    """
+    """Interactive 3D scatter with highlighted endpoint."""
     fig = go.Figure(data=[
         # All points scatter plot
         go.Scatter3d(
@@ -63,13 +54,13 @@ def create_3d_scatter_plot(points_xyz, endpoint_xyz):
             y=points_xyz[:, 1],
             z=points_xyz[:, 2],
             mode='markers',
-            name='数据点',
+            name='points',
             marker=dict(
                 size=2,
                 color=points_xyz[:, 2],
                 colorscale='Viridis',
                 opacity=0.8,
-                colorbar=dict(title='Z 坐标')
+                colorbar=dict(title='Z')
             )
         ),
         # Highlighted Endpoint
@@ -89,11 +80,11 @@ def create_3d_scatter_plot(points_xyz, endpoint_xyz):
     ])
 
     fig.update_layout(
-        title='三维空间点云分布（含 Endpoint）',
+    title='3D Point Distribution (with Endpoint)',
         scene=dict(
-            xaxis_title='X 轴',
-            yaxis_title='Y 轴',
-            zaxis_title='Z 轴'
+            xaxis_title='X',
+            yaxis_title='Y',
+            zaxis_title='Z'
         ),
         margin=dict(r=20, b=10, l=10, t=40),
         legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01)
@@ -101,18 +92,10 @@ def create_3d_scatter_plot(points_xyz, endpoint_xyz):
     return fig
 
 def create_2d_density_plots(points_xyz):
-    """
-    Creates 2D density heatmaps for XY, XZ, and YZ views.
-    
-    Args:
-        points_xyz (np.array): Array of XYZ coordinates for the points.
-        
-    Returns:
-        go.Figure: A Plotly figure object for the 2D density plots.
-    """
+    """2D density heatmaps for XY / XZ / YZ projections."""
     fig = make_subplots(
         rows=1, cols=3,
-        subplot_titles=('XY 平面密度', 'XZ 平面密度', 'YZ 平面密度')
+    subplot_titles=('XY Density', 'XZ Density', 'YZ Density')
     )
 
     # XY-plane density
@@ -148,110 +131,87 @@ def create_2d_density_plots(points_xyz):
         row=1, col=3
     )
 
-    fig.update_layout(
-        title_text='点云三视图密度图',
-        showlegend=False
-    )
-    fig.update_xaxes(title_text="X 轴", row=1, col=1)
-    fig.update_yaxes(title_text="Y 轴", row=1, col=1)
-    fig.update_xaxes(title_text="X 轴", row=1, col=2)
-    fig.update_yaxes(title_text="Z 轴", row=1, col=2)
-    fig.update_xaxes(title_text="Y 轴", row=1, col=3)
-    fig.update_yaxes(title_text="Z 轴", row=1, col=3)
+    fig.update_layout(title_text='Multi-view Density', showlegend=False)
+    fig.update_xaxes(title_text="X", row=1, col=1)
+    fig.update_yaxes(title_text="Y", row=1, col=1)
+    fig.update_xaxes(title_text="X", row=1, col=2)
+    fig.update_yaxes(title_text="Z", row=1, col=2)
+    fig.update_xaxes(title_text="Y", row=1, col=3)
+    fig.update_yaxes(title_text="Z", row=1, col=3)
     
     return fig
 
 def visualize_point_distribution():
+    """Render spatial distribution HTML reports for configured tasks.
+
+    Reads each task's `sample_points.h5`, extracts EEF candidate Cartesian points
+    and endpoint, and emits (a) a 3D scatter and (b) three 2D density projections.
     """
-    Loads endpoint data from an H5 file and visualizes the 3D point distribution
-    and 2D density maps.
-    """
-    # Load configuration to find task data paths (support multiple tasks)
     config_path = os.path.join('config', 'config.yaml')
     if not os.path.exists(config_path):
-        print(f"错误：配置文件未找到于 '{config_path}'")
-        print("请确保配置文件存在或从 config.yaml.template 创建。")
+        print(f"Error: configuration file not found: {config_path}")
         return
 
-    with open(config_path, 'r') as file:
-        config = yaml.safe_load(file)
+    with open(config_path, 'r') as f:
+        config = yaml.safe_load(f)
 
     tasks_cfg = config.get('tasks')
-
     task_list = []
-    # If tasks specified, use them; otherwise fall back to single root_path for backward compatibility
     if tasks_cfg:
-        for tname, t in tasks_cfg.items():
-            tpath = t.get('path')
+        for tname, tdesc in tasks_cfg.items():
+            tpath = tdesc.get('path')
             if not tpath:
-                print(f"警告：task {tname} 未配置 path，已跳过。")
+                print(f"Warning: task {tname} missing path; skipping.")
                 continue
             task_list.append({'name': tname, 'path': tpath})
     else:
         root_path = config.get('root_path')
         if not root_path:
-            print("错误：config 中既没有 'tasks' 也没有 'root_path'。请配置数据路径。")
+            print("Error: neither 'tasks' nor 'root_path' specified in config.")
             return
         task_list.append({'name': 'default', 'path': root_path})
 
+    os.makedirs('html', exist_ok=True)
     any_processed = False
     for t in task_list:
-        root_path = t['path']
         tname = t['name']
-
+        root_path = t['path']
         if not os.path.exists(root_path):
-            print(f"警告：任务 {tname} 的路径不存在: {root_path}，已跳过。")
+            print(f"Warning: path missing for task {tname}: {root_path}")
             continue
-
         h5_path = os.path.join(root_path, 'sample_points.h5')
         if not os.path.exists(h5_path):
-            print(f"警告：数据文件未找到于: {h5_path}（任务 {tname}），已跳过。")
+            print(f"Warning: sample_points.h5 missing for task {tname}: {h5_path}")
             continue
-
-        print(f"正在处理任务 {tname} 的文件: {h5_path}...")
-
-        with h5py.File(h5_path, 'r') as h5_data:
-            if 'state/eef/position' not in h5_data:
-                print(f"错误：在 H5 文件中未找到 'state/eef/position' 数据集（任务 {tname}）。")
+        print(f"Processing task {tname}: {h5_path}")
+        with h5py.File(h5_path, 'r') as h5f:
+            if 'state/eef/position' not in h5f or 'endpoint' not in h5f:
+                print(f"Error: required datasets missing in {h5_path} (task {tname})")
                 continue
-            if 'endpoint' not in h5_data:
-                print(f"错误：在 H5 文件中未找到 'endpoint' 数据集（任务 {tname}）。")
-                continue
-
-            eef_positions = np.array(h5_data['state/eef/position'])
-            endpoint_data = np.array(h5_data['endpoint'])
-
+            eef_positions = np.array(h5f['state/eef/position'])
+            endpoint = np.array(h5f['endpoint'])
         if eef_positions.shape[1] < 9:
-            print(f"错误：数据点维度不足（任务 {tname}）。需要至少9个维度，但只有 {eef_positions.shape[1]}。")
+            print(f"Error: state/eef/position must have ≥9 columns (task {tname})")
             continue
-
         points_xyz = eef_positions[:, 6:9]
-        endpoint_xyz = endpoint_data[6:9]
-
-        print(f"已加载 {len(points_xyz)} 个点（任务 {tname}）。正在生成可视化图表...")
-
-        # Generate and save 3D scatter plot
-        fig_3d = create_3d_scatter_plot(points_xyz, endpoint_xyz)
-        output_3d_filename = f'html/point_distribution_3d_{tname}.html'
-        fig_3d.write_html(output_3d_filename)
-
-        # Generate and save 2D density plots
-        fig_2d = create_2d_density_plots(points_xyz)
-        output_2d_filename = f'html/point_distribution_2d_density_{tname}.html'
-        fig_2d.write_html(output_2d_filename)
-
+        endpoint_xyz = endpoint[6:9]
+        print(f"  Loaded {len(points_xyz)} points; generating visualizations ...")
+        fig3d = create_3d_scatter_plot(points_xyz, endpoint_xyz)
+        out3d = f'html/point_distribution_3d_{tname}.html'
+        fig3d.write_html(out3d)
+        fig2d = create_2d_density_plots(points_xyz)
+        out2d = f'html/point_distribution_2d_density_{tname}.html'
+        fig2d.write_html(out2d)
         print("\n" + "="*60)
-        print(f"任务 {tname} 的可视化完成")
+        print(f"Visualization complete for task {tname}")
         print("="*60)
-        print(f"1. 交互式三维散点图已保存至: {os.path.abspath(output_3d_filename)}")
-        print(f"2. 三视图密度图已保存至: {os.path.abspath(output_2d_filename)}")
-        print("请在您的浏览器中打开这些 HTML 文件以查看。")
+        print(f"1. 3D scatter: {os.path.abspath(out3d)}")
+        print(f"2. 2D densities: {os.path.abspath(out2d)}")
+        print("Open these HTML files in a browser.")
         print("="*60 + "\n")
-
         any_processed = True
-
     if not any_processed:
-        print("未处理任何任务。请检查配置文件和数据路径。")
+        print("No tasks processed. Verify configuration paths.")
 
 
 if __name__ == "__main__":

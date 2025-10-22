@@ -6,13 +6,12 @@ Cone Trajectory – inner cycloid + OA-directed entry
 import numpy as np
 import plotly.graph_objects as go
 
-# ---------- 小工具 ----------
 def normalize(v):
     v = np.asarray(v, dtype=float)
     n = np.linalg.norm(v)
     return v / n if n else v
 
-# ---------- 圆锥内判断 ----------
+# ---------- Cone membership test ----------
 def inside_cone(B, O, OA, theta):
     OB = B - O
     r = np.linalg.norm(OB)
@@ -21,17 +20,13 @@ def inside_cone(B, O, OA, theta):
     phi = np.arccos(np.clip(np.dot(OB, OA) / r, -1, 1))
     return phi <= np.radians(theta)
 
-# ---------- 直线沿一般轴向 OA 到圆锥面 ----------
+# ---------- Axis-directed line to cone surface ----------
 def straight_to_cone(B, O, OA, theta, n_rough=400):
-    """从点 B 沿圆锥轴向 OA 方向 (单位向量) 前进，求与给定半顶角 theta 的圆锥面交点并生成插值点。
+    """Advance from B along axis OA until intersecting cone surface (half-angle theta).
 
-    圆锥定义（顶点 O，轴向 OA，半顶角 theta）：
-        设任意点 P 的向量 OP = P - O
-        轴向坐标 a = dot(OP, OA)   (要求 a >= 0)
-        径向向量 r_vec = OP - a * OA,  r = ||r_vec||
-        圆锥面方程: r = tan(theta) * a
-
-    若从 B 沿 OA 方向作直线 B + t * OA (t>=0)，其径向分量保持不变，只需解方程得到 t。
+    Cone: apex O, axis OA (unit), half-angle θ. For any point P: let OP=P-O, axial a=dot(OP,OA) (a≥0),
+    radial component r_vec=OP-a*OA with radius r=||r_vec||, surface satisfies r = tan(θ) * a.
+    Straight line B + t*OA preserves radial component; solve for t giving intersection.
     """
     B = np.asarray(B, dtype=float)
     O = np.asarray(O, dtype=float)
@@ -39,30 +34,29 @@ def straight_to_cone(B, O, OA, theta, n_rough=400):
 
     m = np.tan(np.radians(theta))
     OB = B - O
-    a0 = np.dot(OB, OA)                # 轴向投影 (可为负，表示在顶点另一侧)
-    r_vec = OB - a0 * OA               # 径向分量
+    a0 = np.dot(OB, OA)                # axial projection (can be negative)
+    r_vec = OB - a0 * OA               # radial component
     r0 = np.linalg.norm(r_vec)
 
-    # 已经在圆锥内或在面上：r0 <= m * a0 且 a0 >= 0
+    # Inside or on surface
     if a0 >= 0 and r0 <= m * a0 + 1e-12:
         hit = B.copy()
     else:
-        # 解 r0 = m * (a0 + t)  ->  t = r0/m - a0
-        # 若 t < 0 说明 B 朝 -OA 方向才会遇到锥面，此时直接设为 B（退化），避免数值问题
+    # Solve r0 = m*(a0+t) => t = r0/m - a0 ; clamp if negative
         t = r0 / m - a0
         if t < 0:
             hit = B.copy()
         else:
             hit = B + t * OA
 
-    # 生成非均匀插值点（靠近 hit 更密集）
+    # Nonuniform sampling emphasizing the hit point
     u = np.linspace(0, 1, n_rough)
     power = 2.0
     u_nonuniform = u ** power
     line_points = B + u_nonuniform[:, None] * (hit - B)
     return line_points
 
-# ---------- 圆锥内摆线 ----------
+# ---------- Inner cycloid within cone plane ----------
 def cone_inner_cycloid(B, O, A, n_rough=200):
     """
     Generate a cycloid curve from B to O in the AOB plane.
@@ -78,16 +72,14 @@ def cone_inner_cycloid(B, O, A, n_rough=200):
     OA = A - O
     OB = B - O
 
-    # 1. Define the coordinate system of the AOB plane
-    # y'-axis is along the cone axis OA
+    # 1. Local frame: y' aligned with OA
     y_prime_axis = normalize(OA)
     
-    # x'-axis is in the AOB plane and perpendicular to the y'-axis
-    # It's the component of OB perpendicular to OA
+    # x' = component of OB orthogonal to OA
     proj_OB_on_OA = np.dot(OB, y_prime_axis) * y_prime_axis
     x_prime_vec = OB - proj_OB_on_OA
     
-    # Handle the case where B is on the axis
+    # Axis degeneracy
     if np.linalg.norm(x_prime_vec) < 1e-6:
         # B is on the axis, the curve is a straight line from B to O
         return np.linspace(B, O, n_rough)
@@ -99,37 +91,28 @@ def cone_inner_cycloid(B, O, A, n_rough=200):
     x_b_prime = np.linalg.norm(x_prime_vec)
     y_b_prime = np.dot(OB, y_prime_axis)
 
-    # 3. Generate a 2D cycloid from (0, 0) to (x_b_prime, y_b_prime)
-    # We use one half-arch of a standard cycloid, scaled.
-    # Standard half-arch: t from 0 to pi -> x=(t-sin(t)), y=(1-cos(t))
-    # This goes from (0,0) to (pi, 2)
+    # 3. Scaled half-cycloid (t∈[0,π])
     
-    # 非均匀采样：越靠近终点O，步幅越小
-    # 使用指数函数来创建非均匀的参数分布
-    # 参数u从0到1，映射到t从0到pi
+    # Nonuniform terminal-concentrated parameterization
     u = np.linspace(0, 1, n_rough)
     
-    # 使用指数函数创建非均匀分布，靠近终点(u=1)时步幅更小
-    # 可以通过调整power参数来控制非均匀程度
-    power = 2.0  # power > 1 使得靠近终点时采样更密集
+    power = 2.0  # >1 => denser near end
     u_nonuniform = u ** power
     
-    # 将非均匀参数映射到摆线参数t
+    # Map to cycloid parameter t
     t = u_nonuniform * np.pi
     
     # Scale factors to map the half-arch to our target point (x_b_prime, y_b_prime)
     x_prime_curve = (x_b_prime / np.pi) * (t - np.sin(t))
     y_prime_curve = (y_b_prime / 2.0) * (1 - np.cos(t))
 
-    # 4. Transform the 2D curve back to the original 3D coordinate system
-    # The curve is a linear combination of the basis vectors x_prime_axis and y_prime_axis,
-    # translated by the origin O.
+    # 4. Lift to 3D
     curve = O + x_prime_curve[:, np.newaxis] * x_prime_axis + y_prime_curve[:, np.newaxis] * y_prime_axis
     
-    # The curve is generated from O to B, so we reverse it to go from B to O.
+    # Reverse for B→O ordering.
     return curve[::-1]
 
-# ---------- 主轨迹（带标记） ----------
+# ---------- Main trajectory ----------
 def generate_cone_trajectory(start, end, direct, num, theta=60):
     O  = np.asarray(end, dtype=float)
     OA = normalize(direct)
