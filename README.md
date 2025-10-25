@@ -18,7 +18,7 @@ Large-scale diverse data underpin robust manipulation, yet existing pipelines tr
 
 ## Repository Layout (key files)
 ```
-fieldgen-grasp/
+fieldgen/
    generate.py              # main generation entry
    requirements.txt         # Python dependencies
    config/
@@ -36,7 +36,7 @@ fieldgen-grasp/
 Python >= 3.10 recommended.
 ```bash
 git clone <repo-url>
-cd fieldgen-grasp
+cd fieldgen
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
