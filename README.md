@@ -186,8 +186,16 @@ PRs and issues are welcome:
 - Data conversion & format enhancements
 - Robust unit tests & CI integration
 
-## Citation (Placeholder)
-If you use FieldGen in academic work, please cite it. (BibTeX will be added when a paper is published.)
+## Citation
+If you find our work useful, please consider citing:
+~~~
+@article{wang2025fieldgen,
+  title={FieldGen: From Teleoperated Pre-Manipulation Trajectories to Field-Guided Data Generation},
+  author={Wang, Wenhao and Ye, Kehe and Zhou, Xinyu and Chen, Tianxing and Min, Cao and Zhu, Qiaoming and Yang, Xiaokang and Shen, Yongjian and Yang, Yang and Yao, Maoqing and others},
+  journal={arXiv preprint arXiv:2510.20774},
+  year={2025}
+}
+~~~
 
 ---
 If FieldGen helps your research or project, consider starring the repository. Thank you!
