@@ -1,10 +1,10 @@
 
 
-# FieldGen
+# FieldGen 🤖✨
 
 Large-scale diverse data underpin robust manipulation, yet existing pipelines trade scale, diversity, and quality: simulation scales but leaves sim-to-real gaps; teleoperation is precise but costly and behaviorally narrow. FieldGen is a field-guided trajectory generation & data scaling framework.
 
-## Features
+## ✨ Features
 - Trajectory types: Bezier / Cone (structured approach path)
 - Endpoint guided: local Z axis reverse assist in curve construction
 - Non‑uniform sampling: denser near endpoint (stabler learning)
@@ -16,7 +16,7 @@ Large-scale diverse data underpin robust manipulation, yet existing pipelines tr
 - Centralized YAML configuration
 - Minimal algorithms: easy to plug in new trajectory generators
 
-## Repository Layout (key files)
+## 📁 Repository Layout (key files)
 ```
 fieldgen/
    generate.py              # main generation entry
@@ -32,7 +32,7 @@ fieldgen/
    tests/                   # demo style tests
 ```
 
-## Installation
+## 🚀 Installation
 Python >= 3.10 recommended.
 ```bash
 git clone <repo-url>
@@ -47,7 +47,7 @@ pip install plotly
 ```
 Base dependencies (see `requirements.txt`): `numpy, scipy, pyyaml, h5py, Pillow, tqdm, matplotlib` (+ optional `plotly`).
 
-## Configuration (`config/config.yaml`)
+## ⚙️ Configuration (`config/config.yaml`)
 `generate` section (selected fields):
 
 | Field | Meaning |
@@ -86,7 +86,7 @@ tasks:
       max_trajectories: null
 ```
 
-## Input Data Requirements
+## 📥 Input Data Requirements
 Each task folder must include:
 ```
 <task_path>/
@@ -99,7 +99,7 @@ Mandatory datasets inside `sample_points.h5`:
 - `state/eef/position` : shape `(N, >=12)`; columns `[6:9]` starting xyz, `[9:12]` starting rpy
 - `endpoint` : shape `(>=12,)`; `[6:9]` final xyz, `[9:12]` final rpy
 
-## Output Format
+## 📤 Output Format
 Each generated `episodeK/aligned_joints.h5` contains:
 ```
 timestamps : (T,)
@@ -112,7 +112,7 @@ reward/value : scalar or (T,)       # only in --reward mode
 Trajectory concatenation ordering: `[left_xyz(3), left_rpy(3), right_xyz(3), right_rpy(3)] = 12`.
 Images: All relevant `.jpg` copied to `episodeK/camera/0/`.
 
-## Usage
+## 💡 Usage
 Deterministic endpoint mode:
 ```bash
 python generate.py --config config/config.yaml
@@ -122,18 +122,18 @@ Reward augmentation mode (random endpoints + reward writing):
 python generate.py --config config/config.yaml --reward
 ```
 
-## Data Collection
+## 📊 Data Collection
 
 FieldGen supports two complementary data acquisition modes for building large, diverse approach (pre‑manipulation) datasets:
 
-1. Automated Workspace Filling: Use the helper script (see `document/data_collect_notice.md`) to auto‑calibrate a reachable workspace from a few existing episodes, then generate a dense set of coverage points via 3D Z‑order (Morton) or Hilbert space‑filling curves. Each point optionally receives a synthesized sinusoidal RPY perturbation sequence to enrich orientation diversity.
-2. Teleoperation Traces: Manually drive the robot to collect longer (≈1–2 min) free‑space approach trajectories while lightly rotating the wrist/gripper and keeping the target object centered in view. This yields high‑quality, contact‑proximal behavior diversity where automated methods may underperform.
+1. 🔄 **Automated Workspace Filling**: Use the helper script (see `document/data_collect_notice.md`) to auto‑calibrate a reachable workspace from a few existing episodes, then generate a dense set of coverage points via 3D Z‑order (Morton) or Hilbert space‑filling curves. Each point optionally receives a synthesized sinusoidal RPY perturbation sequence to enrich orientation diversity.
+2. 🎮 **Teleoperation Traces**: Manually drive the robot to collect longer (≈1–2 min) free‑space approach trajectories while lightly rotating the wrist/gripper and keeping the target object centered in view. This yields high‑quality, contact‑proximal behavior diversity where automated methods may underperform.
 
 Full details are documented here:
 ▶ [Data Collection Guide](document/data_collect_notice.md)
 
 
-## Reward Mechanism
+## 🎯 Reward Mechanism
 In reward mode:
 1. Read original endpoint `original_endpoint_pos`
 2. Stratified sample perturbation distances within `[0, endpoint_random_radius * (1 - reward_target_min)]`
@@ -143,23 +143,23 @@ In reward mode:
 
 Extensible ideas: include orientation deviation, smoothness, obstacle clearance, etc.
 
-## Trajectory Algorithms
-### Quadratic Bezier Curve
+## 🔄 Trajectory Algorithms
+### 🎨 Quadratic Bezier Curve
 - Control points: `start`, `end`, projection adjustment using `(end + direct)` direction
 - Arc length estimate + power resampling (`power > 1` densifies tail; `<1` densifies head)
 - Degenerate case (direct≈0): fall back to midpoint control
 
-### In-Cone Half‑Cycloid
+### 🔺 In-Cone Half‑Cycloid
 - If start inside cone: direct half‑cycloid to apex
 - If start outside cone: axial line inwards + half‑cycloid segment
 - Allocate sample counts by relative estimated length of segments
 
-### RPY Interpolation
+### 🔄 RPY Interpolation
 - Same‑hemisphere quaternion handling avoids long rotations
 - Quadratic ease‑out for monotonically decreasing angular velocity
 - Accumulate axis‑angle increments for sequence
 
-## Visualization
+## 📊 Visualization
 ```bash
 python utils/visualize_points.py
 ```
@@ -168,7 +168,7 @@ Generates:
 - `html/point_distribution_2d_density_<task>.html`
 Open in your browser.
 
-## FAQ
+## ❓ FAQ
 | Question | Suggestion |
 |----------|------------|
 | Trajectories too short (heavy padding) | Tune `beta` or reduce `chunk_size` |
@@ -177,16 +177,16 @@ Open in your browser.
 | Add new trajectory type | Create `utils/xxx_curve.py` and extend factory in generator |
 | Image copy slows processing | Limit per episode images or disable copying |
 
-## License
+## 📄 License
 This project is licensed under the MIT License – see the `LICENSE` file for details.
 
-## Contributing
+## 🤝 Contributing
 PRs and issues are welcome:
 - New trajectory generation algorithms & sampling strategies
 - Data conversion & format enhancements
 - Robust unit tests & CI integration
 
-## Citation
+## 📚 Citation
 If you find our work useful, please consider citing:
 ~~~
 @article{wang2025fieldgen,
@@ -198,5 +198,5 @@ If you find our work useful, please consider citing:
 ~~~
 
 ---
-If FieldGen helps your research or project, consider starring the repository. Thank you!
+⭐ If FieldGen helps your research or project, consider starring the repository. Thank you! 🙏
 ---
