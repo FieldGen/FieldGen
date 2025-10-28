@@ -28,7 +28,6 @@ package-lock.json
 yarn.lock
 npm-debug.log
 *.html
-*.jpg
 outputs/
 figs/
 html/

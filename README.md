@@ -1,4 +1,4 @@
-# FieldGen <img src="icon.jpg" alt="icon" width="40">
+# <img src="./img/icon.jpg" alt="icon" width="25"> FieldGen
 
 <p align="center">
   <a href="https://fieldgen.github.io/">
@@ -23,7 +23,7 @@
 
 Large-scale diverse data underpin robust manipulation, yet existing pipelines trade scale, diversity, and quality: simulation scales but leaves sim-to-real gaps; teleoperation is precise but costly and behaviorally narrow. FieldGen is a field-guided trajectory generation & data scaling method.
 
-![teaser](./teaser.jpg)
+![teaser](./img/teaser.jpg)
 
 
 Our method is very easy to use. No pipeline, no extra hardware and no heavy codebase. **Simply teleoperate the robot once to manipulate and move the arms around the objects, then run a single Python script—seamlessly transfer from traditional data collection.**
