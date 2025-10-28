@@ -1,8 +1,32 @@
+# FieldGen <img src="icon.jpg" alt="icon" width="40">
+
+<p align="center">
+  <a href="https://fieldgen.github.io/">
+    <img src="https://img.shields.io/badge/Project-Website-green" alt="Project Website">
+  </a>
+  <a href="https://arxiv.org/abs/2510.20774">
+    <img src="https://img.shields.io/badge/arXiv-2510.20774-b31b1b" alt="arXiv">
+  </a>
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/License-MIT-yellow" alt="License: MIT">
+  </a>
+  <a href="https://github.com/FieldGen/FieldGen">
+    <img src="https://img.shields.io/github/last-commit/FieldGen/FieldGen" alt="GitHub last commit">
+  </a>
+  <a>
+    <img src="https://img.shields.io/badge/python-3.10+-blue.svg" alt="Python 3.10+">
+  </a>
+</p>
 
 
-# FieldGen 🤖✨
+**[Website](https://fieldgen.github.io/) | [arXiv](https://arxiv.org/abs/2510.20774)**
 
-Large-scale diverse data underpin robust manipulation, yet existing pipelines trade scale, diversity, and quality: simulation scales but leaves sim-to-real gaps; teleoperation is precise but costly and behaviorally narrow. FieldGen is a field-guided trajectory generation & data scaling framework.
+Large-scale diverse data underpin robust manipulation, yet existing pipelines trade scale, diversity, and quality: simulation scales but leaves sim-to-real gaps; teleoperation is precise but costly and behaviorally narrow. FieldGen is a field-guided trajectory generation & data scaling method.
+
+![teaser](./teaser.jpg)
+
+
+Our method is very easy to use. No pipeline, no extra hardware and no heavy codebase. **Simply teleoperate the robot once to manipulate and move the arms around the objects, then run a single Python script—seamlessly transfer from traditional data collection.**
 
 ## ✨ Features
 - Trajectory types: Bezier / Cone (structured approach path)
